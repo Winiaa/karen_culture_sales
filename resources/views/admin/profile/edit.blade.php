@@ -125,31 +125,47 @@
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-white py-3 text-danger">
                 <h5 class="mb-0">
-                    <i class="fas fa-user-times me-2 text-danger"></i> Delete Account
+                    <i class="fas fa-trash-alt me-2 text-danger"></i> Delete Account
                 </h5>
             </div>
             <div class="card-body">
                 <p>Once your account is deleted, all of its resources and data will be permanently deleted.</p>
                 
-                <form method="post" action="{{ route('profile.destroy') }}" class="mt-3">
-                    @csrf
-                    @method('delete')
-                    
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                    <i class="fas fa-trash-alt me-1"></i> Delete Account
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteAccountModalLabel">Delete Account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{{ route('profile.destroy') }}">
+                @csrf
+                @method('delete')
+                
+                <div class="modal-body">
+                    <p class="text-danger">Are you sure you want to delete your account? This action cannot be undone.</p>
                     <div class="mb-3">
-                        <label for="delete_password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="delete_password" name="password" autocomplete="current-password" />
+                        <label for="delete_password" class="form-label">Enter your password to confirm:</label>
+                        <input type="password" class="form-control" id="delete_password" name="password" required>
                         @error('password', 'userDeletion')
                             <div class="text-danger mt-1">{{ $message }}</div>
                         @enderror
                     </div>
-                    
-                    <div class="d-flex justify-content-end">
-                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete your account? This action cannot be undone.')">
-                            Delete Account
-                        </button>
-                    </div>
-                </form>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete Account</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
