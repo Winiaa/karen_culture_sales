@@ -160,7 +160,7 @@
                                 <th>Customer</th>
                                 <th>Total</th>
                                 <th>Date</th>
-                                <th></th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>

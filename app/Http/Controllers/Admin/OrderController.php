@@ -25,6 +25,19 @@ class OrderController extends Controller
 
         // Get latest orders
         $latestOrders = Order::with(['user', 'orderItems.product'])
+            ->where(function($q) {
+                $q->whereHas('payment', function($q) {
+                    $q->where(function($q) {
+                        // Show all cash on delivery orders
+                        $q->where('payment_method', 'cash_on_delivery');
+                        // For credit card orders, only show completed payments
+                        $q->orWhere(function($q) {
+                            $q->where('payment_method', 'stripe')
+                              ->where('payment_status', 'completed');
+                        });
+                    });
+                });
+            })
             ->orderBy('created_at', 'desc')
             ->take(10)
             ->get();
@@ -617,9 +630,11 @@ class OrderController extends Controller
             }
         }
         
-        // Filter by payment status
+        // Filter by payment status - default to completed if not specified
         if ($request->filled('payment_status') && in_array($request->payment_status, ['pending', 'completed', 'failed'])) {
             $query->where('payment_status', $request->payment_status);
+        } else {
+            $query->where('payment_status', 'completed');
         }
         
         // Filter by order status

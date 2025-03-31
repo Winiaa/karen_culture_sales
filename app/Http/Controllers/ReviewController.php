@@ -24,6 +24,7 @@ class ReviewController extends Controller
         $review->product_id = $product->id;
         $review->rating = $request->rating;
         $review->comment = $request->comment;
+        $review->status = 'pending';
         $review->save();
 
         return back()->with('success', 'Review submitted successfully!');

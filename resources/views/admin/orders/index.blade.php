@@ -86,9 +86,11 @@
                             <td>@baht($order->total_amount)</td>
                             <td>
                                 <div class="fw-bold text-secondary text-uppercase small">
-                                    Payment Method
+                                    {{ $order->payment->payment_method === 'stripe' ? 'Credit Card' : 'Cash on Delivery' }}
                                 </div>
-                                <div>{{ $order->payment->payment_method === 'stripe' ? 'Credit Card' : 'Cash on Delivery' }}</div>
+                                <span class="badge bg-{{ $order->payment_status === 'completed' ? 'success' : ($order->payment_status === 'pending' ? 'warning' : 'danger') }}">
+                                    {{ ucfirst($order->payment_status) }}
+                                </span>
                             </td>
                             <td>
                                 <span class="badge bg-{{ $order->order_status === 'delivered' ? 'success' : ($order->order_status === 'cancelled' ? 'danger' : 'primary') }}">
@@ -104,48 +106,9 @@
                                     <a href="{{ route('admin.orders.show', $order) }}" class="btn btn-sm btn-outline-primary">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary edit-order-btn" data-modal-target="#updateStatus{{ $order->id }}">
-                                    <i class="fas fa-edit"></i>
+                                    <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#updateStatusModal{{ $order->id }}">
+                                        <i class="fas fa-edit"></i>
                                     </button>
-                                </div>
-
-                                <!-- Update Status Modal -->
-                                <div class="modal fade" id="updateStatus{{ $order->id }}" tabindex="-1" aria-labelledby="updateStatusLabel{{ $order->id }}" aria-hidden="true" style="z-index: 1050;">
-                                    <div class="modal-dialog modal-dialog-centered">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">Update Order Status</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                            </div>
-                                            <form action="{{ route('admin.orders.status', $order) }}" method="POST">
-                                                @csrf
-                                                @method('PUT')
-                                                <div class="modal-body">
-                                                    <div class="mb-3">
-                                                        <label for="order_status" class="form-label">Order Status</label>
-                                                        <select class="form-select" id="order_status" name="order_status" required>
-                                                            <option value="processing" {{ $order->order_status === 'processing' ? 'selected' : '' }}>Processing</option>
-                                                            <option value="shipped" {{ $order->order_status === 'shipped' ? 'selected' : '' }}>Shipped</option>
-                                                            <option value="delivered" {{ $order->order_status === 'delivered' ? 'selected' : '' }}>Delivered</option>
-                                                            <option value="cancelled" {{ $order->order_status === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
-                                                        </select>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label for="payment_status" class="form-label">Payment Status</label>
-                                                        <select class="form-select" id="payment_status" name="payment_status" required>
-                                                            <option value="pending" {{ $order->payment_status === 'pending' ? 'selected' : '' }}>Pending</option>
-                                                            <option value="completed" {{ $order->payment_status === 'completed' ? 'selected' : '' }}>Completed</option>
-                                                            <option value="failed" {{ $order->payment_status === 'failed' ? 'selected' : '' }}>Failed</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                                    <button type="submit" class="btn btn-karen">Update Status</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
                                 </div>
                             </td>
                         </tr>

@@ -1,10 +1,15 @@
 @extends('layouts.admin')
 
 @section('title', 'Sales Report')
-@section('subtitle', 'Analyze sales performance')
+@section('subtitle', 'View and analyze sales data')
 
 @section('content')
 <div class="container-fluid">
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>Note:</strong> By default, this report only shows orders with completed payments. Use the Payment Status filter to view orders with other payment statuses.
+    </div>
+
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>

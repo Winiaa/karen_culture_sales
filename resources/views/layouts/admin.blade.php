@@ -437,10 +437,15 @@
                             <i class="fas fa-chart-bar me-2"></i> Sales Report
                         </a>
                     </li>
-                    <!-- Users management -->
+                    <!-- Users management section -->
                     <li class="nav-item mb-2">
                         <a href="{{ route('admin.users.index') }}" class="nav-link text-white {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
                             <i class="fas fa-users me-2"></i> Users
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a href="{{ route('admin.reviews.index') }}" class="nav-link text-white {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}">
+                            <i class="fas fa-star me-2"></i> Reviews
                         </a>
                     </li>
                 </ul>

@@ -58,8 +58,20 @@
                             
                             <div class="mb-3">
                                 <strong>Stock:</strong>
-                                <span class="badge bg-{{ $product->stock > 0 ? 'success' : 'danger' }}">
-                                    {{ $product->stock }}
+                                @php
+                                    $stockColor = 'success';
+                                    $stockText = $product->quantity;
+                                    
+                                    if ($product->quantity <= 0) {
+                                        $stockColor = 'danger';
+                                        $stockText = 'Out of Stock';
+                                    } elseif ($product->quantity <= 5) {
+                                        $stockColor = 'warning';
+                                        $stockText = $product->quantity . ' (Low Stock)';
+                                    }
+                                @endphp
+                                <span class="badge bg-{{ $stockColor }}">
+                                    {{ $stockText }}
                                 </span>
                             </div>
                             

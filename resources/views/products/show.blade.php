@@ -530,39 +530,48 @@
 
                 <div class="row">
                     @forelse($product->reviews as $review)
-                        <div class="col-md-6 mb-4">
-                            <div class="card h-100">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <div class="rating">
-                                            @for($i = 1; $i <= 5; $i++)
-                                                <i class="{{ $i <= $review->rating ? 'fas fa-star' : 'far fa-star' }}"></i>
-                                            @endfor
+                        @if($review->status === 'approved' || (auth()->check() && $review->user_id === auth()->id()))
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <div class="rating">
+                                                @for($i = 1; $i <= 5; $i++)
+                                                    <i class="{{ $i <= $review->rating ? 'fas fa-star' : 'far fa-star' }}"></i>
+                                                @endfor
+                                            </div>
+                                            <div>
+                                                <small class="text-muted">{{ $review->created_at->diffForHumans() }}</small>
+                                                @if($review->status !== 'approved')
+                                                    <span class="badge bg-{{ $review->status === 'pending' ? 'warning' : 'danger' }} ms-2">
+                                                        {{ ucfirst($review->status) }}
+                                                    </span>
+                                                @endif
+                                            </div>
                                         </div>
-                                        <small class="text-muted">{{ $review->created_at->diffForHumans() }}</small>
-                                    </div>
-                                    <div class="d-flex align-items-center mb-3">
-                                        <img src="{{ $review->user->profile_picture_url }}" alt="{{ $review->user->name }}" 
-                                             class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
-                                        <h6 class="card-subtitle mb-0 text-muted">{{ $review->user->name }}</h6>
-                                    </div>
-                                    <p class="card-text">{{ $review->comment }}</p>
+                                        <div class="d-flex align-items-center mb-3">
+                                            <img src="{{ $review->user->profile_picture_url }}" alt="{{ $review->user->name }}" 
+                                                 class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                            <h6 class="card-subtitle mb-0 text-muted">{{ $review->user->name }}</h6>
+                                        </div>
+                                        <p class="card-text">{{ $review->comment }}</p>
 
-                                    @if(auth()->check() && $review->canBeEditedBy(auth()->user()))
-                                        <div class="d-flex justify-content-end">
-                                            <button type="button" class="btn btn-sm btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#editReview{{ $review->id }}">
-                                                <i class="fas fa-edit me-1"></i> Edit
-                                            </button>
-                                            <form action="{{ route('reviews.destroy', $review) }}" method="POST">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash me-1"></i> Delete</button>
-                                            </form>
-                                        </div>
-                                    @endif
+                                        @if(auth()->check() && $review->canBeEditedBy(auth()->user()))
+                                            <div class="d-flex justify-content-end">
+                                                <button type="button" class="btn btn-sm btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#editReview{{ $review->id }}">
+                                                    <i class="fas fa-edit me-1"></i> Edit
+                                                </button>
+                                                <form action="{{ route('reviews.destroy', $review) }}" method="POST">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash me-1"></i> Delete</button>
+                                                </form>
+                                            </div>
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        @endif
                     @empty
                         <div class="col-12">
                             <div class="alert alert-info">

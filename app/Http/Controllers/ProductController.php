@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Cache;
 
 class ProductController extends Controller
 {
@@ -87,7 +88,9 @@ class ProductController extends Controller
             }
         }
 
-        $products = $query->paginate(12);
+        $products = Cache::remember('products.list', 3600, function () {
+            return $query->paginate(12);
+        });
         $categories = Category::where('is_active', 1)->get();
 
         return view('products.index', compact('products', 'categories'));

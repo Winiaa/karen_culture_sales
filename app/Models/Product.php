@@ -78,7 +78,7 @@ class Product extends Model
      */
     public function getAverageRatingAttribute()
     {
-        return $this->reviews()->avg('rating') ?? 0;
+        return $this->reviews()->where('status', 'approved')->avg('rating') ?? 0;
     }
 
     /**

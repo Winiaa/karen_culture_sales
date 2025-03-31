@@ -9,6 +9,10 @@ use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Intervention\Image\Facades\Image;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class ProductController extends Controller
 {
@@ -31,8 +35,10 @@ class ProductController extends Controller
             });
         }
 
-        $products = $query->orderBy('created_at', 'desc')
-            ->paginate(20);
+        $products = Cache::remember('admin.products', 3600, function () use ($query) {
+            return $query->orderBy('created_at', 'desc')
+                ->paginate(20);
+        });
 
         $categories = Category::all();
 
@@ -73,57 +79,74 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'price' => 'required|numeric|min:0',
+            'quantity' => 'required|integer|min:0',
+            'category_id' => 'required|exists:categories,id',
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'additional_images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+        ]);
+
         try {
-            $data = $this->validateProduct($request);
-            
-            // Generate slug from title
-            $data['slug'] = Str::slug($request->title);
-            
-            // Process and store the main image
+            DB::beginTransaction();
+
+            // Handle main image
             if ($request->hasFile('image')) {
                 $image = $request->file('image');
-                $filename = time() . '_' . str_replace(' ', '_', $image->getClientOriginalName());
+                $filename = time() . '_' . $image->getClientOriginalName();
                 
-                // Make sure the directory exists
-                if (!Storage::disk('public')->exists('products')) {
-                    Storage::disk('public')->makeDirectory('products');
-                }
+                // Optimize and save the image
+                $img = Image::make($image)
+                    ->resize(800, null, function ($constraint) {
+                        $constraint->aspectRatio();
+                        $constraint->upsize();
+                    })
+                    ->save(storage_path('app/public/products/' . $filename));
                 
-                $imagePath = $image->storeAs('products', $filename, 'public');
-                $data['image'] = $imagePath;
+                $imagePath = 'products/' . $filename;
             }
-            
-            // Process and store additional images
+
+            // Handle additional images
             $additionalImages = [];
             if ($request->hasFile('additional_images')) {
-                foreach ($request->file('additional_images') as $index => $image) {
-                    $filename = time() . '_' . $index . '_' . str_replace(' ', '_', $image->getClientOriginalName());
+                foreach ($request->file('additional_images') as $image) {
+                    $filename = time() . '_' . $image->getClientOriginalName();
                     
-                    // Make sure the directory exists
-                    if (!Storage::disk('public')->exists('products/additional')) {
-                        Storage::disk('public')->makeDirectory('products/additional');
-                    }
+                    // Optimize and save each additional image
+                    $img = Image::make($image)
+                        ->resize(800, null, function ($constraint) {
+                            $constraint->aspectRatio();
+                            $constraint->upsize();
+                        })
+                        ->save(storage_path('app/public/products/' . $filename));
                     
-                    $imagePath = $image->storeAs('products/additional', $filename, 'public');
-                    $additionalImages[] = $imagePath;
+                    $additionalImages[] = 'products/' . $filename;
                 }
-                
-                $data['additional_images'] = $additionalImages;
             }
-            
-            // Set the status
-            $data['status'] = $request->status;
-            
+
             // Create product
-            $product = Product::create($data);
-            
+            $product = Product::create([
+                'title' => $request->title,
+                'slug' => Str::slug($request->title),
+                'description' => $request->description,
+                'price' => $request->price,
+                'quantity' => $request->quantity,
+                'category_id' => $request->category_id,
+                'image' => $imagePath ?? null,
+                'additional_images' => !empty($additionalImages) ? $additionalImages : null,
+                'status' => $request->status ?? 'active'
+            ]);
+
+            DB::commit();
+
             return redirect()->route('admin.products.index')
                 ->with('success', 'Product created successfully.');
         } catch (\Exception $e) {
-            \Log::error('Error creating product: ' . $e->getMessage());
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Error creating product: ' . $e->getMessage());
+            DB::rollBack();
+            Log::error('Error creating product: ' . $e->getMessage());
+            return back()->with('error', 'Failed to create product. Please try again.');
         }
     }
 
@@ -150,78 +173,87 @@ class ProductController extends Controller
      */
     public function update(Request $request, Product $product)
     {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'price' => 'required|numeric|min:0',
+            'quantity' => 'required|integer|min:0',
+            'category_id' => 'required|exists:categories,id',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'additional_images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+        ]);
+
         try {
-            $data = $this->validateProduct($request, true);
-            
-            // Handle main image if a new one is uploaded
+            DB::beginTransaction();
+
+            // Handle main image
             if ($request->hasFile('image')) {
-                // Delete old image if it exists
-                if ($product->image && Storage::disk('public')->exists($product->image)) {
-                    Storage::disk('public')->delete($product->image);
+                // Delete old image
+                if ($product->image) {
+                    Storage::delete('public/' . $product->image);
                 }
-                
+
                 $image = $request->file('image');
-                $filename = time() . '_' . str_replace(' ', '_', $image->getClientOriginalName());
+                $filename = time() . '_' . $image->getClientOriginalName();
                 
-                // Make sure the directory exists
-                if (!Storage::disk('public')->exists('products')) {
-                    Storage::disk('public')->makeDirectory('products');
-                }
+                // Optimize and save the new image
+                $img = Image::make($image)
+                    ->resize(800, null, function ($constraint) {
+                        $constraint->aspectRatio();
+                        $constraint->upsize();
+                    })
+                    ->save(storage_path('app/public/products/' . $filename));
                 
-                $imagePath = $image->storeAs('products', $filename, 'public');
-                $data['image'] = $imagePath;
+                $imagePath = 'products/' . $filename;
+            } else {
+                $imagePath = $product->image;
             }
-            
+
             // Handle additional images
+            $additionalImages = $product->additional_images ?? [];
             if ($request->hasFile('additional_images')) {
-                // Get existing additional images
-                $existingImages = $product->additional_images ?? [];
-                
-                // Process and store new additional images
-                foreach ($request->file('additional_images') as $index => $image) {
-                    $filename = time() . '_' . $index . '_' . str_replace(' ', '_', $image->getClientOriginalName());
-                    
-                    // Make sure the directory exists
-                    if (!Storage::disk('public')->exists('products/additional')) {
-                        Storage::disk('public')->makeDirectory('products/additional');
-                    }
-                    
-                    $imagePath = $image->storeAs('products/additional', $filename, 'public');
-                    $existingImages[] = $imagePath;
+                // Delete old additional images
+                foreach ($product->additional_images ?? [] as $oldImage) {
+                    Storage::delete('public/' . $oldImage);
                 }
-                
-                $data['additional_images'] = $existingImages;
-            }
-            
-            // Handle deleted images if any
-            if ($request->has('delete_images') && is_array($request->delete_images)) {
-                $currentImages = $product->additional_images ?? [];
-                $imagesToKeep = [];
-                
-                foreach ($currentImages as $imagePath) {
-                    if (!in_array($imagePath, $request->delete_images)) {
-                        $imagesToKeep[] = $imagePath;
-                    } else {
-                        // Delete the file from storage
-                        if (Storage::disk('public')->exists($imagePath)) {
-                            Storage::disk('public')->delete($imagePath);
-                        }
-                    }
+
+                $additionalImages = [];
+                foreach ($request->file('additional_images') as $image) {
+                    $filename = time() . '_' . $image->getClientOriginalName();
+                    
+                    // Optimize and save each additional image
+                    $img = Image::make($image)
+                        ->resize(800, null, function ($constraint) {
+                            $constraint->aspectRatio();
+                            $constraint->upsize();
+                        })
+                        ->save(storage_path('app/public/products/' . $filename));
+                    
+                    $additionalImages[] = 'products/' . $filename;
                 }
-                
-                $data['additional_images'] = $imagesToKeep;
             }
-            
+
             // Update product
-            $product->update($data);
-            
+            $product->update([
+                'title' => $request->title,
+                'slug' => Str::slug($request->title),
+                'description' => $request->description,
+                'price' => $request->price,
+                'quantity' => $request->quantity,
+                'category_id' => $request->category_id,
+                'image' => $imagePath,
+                'additional_images' => !empty($additionalImages) ? $additionalImages : null,
+                'status' => $request->status ?? 'active'
+            ]);
+
+            DB::commit();
+
             return redirect()->route('admin.products.index')
                 ->with('success', 'Product updated successfully.');
         } catch (\Exception $e) {
-            \Log::error('Error updating product: ' . $e->getMessage());
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Error updating product: ' . $e->getMessage());
+            DB::rollBack();
+            Log::error('Error updating product: ' . $e->getMessage());
+            return back()->with('error', 'Failed to update product. Please try again.');
         }
     }
 

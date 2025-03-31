@@ -53,7 +53,23 @@
                                 <td>{{ $product->name }}</td>
                                 <td>{{ $product->category->name }}</td>
                                 <td>${{ number_format($product->price, 2) }}</td>
-                                <td>{{ $product->quantity }}</td>
+                                <td>
+                                    @php
+                                        $stockColor = 'success';
+                                        $stockText = $product->quantity;
+                                        
+                                        if ($product->quantity <= 0) {
+                                            $stockColor = 'danger';
+                                            $stockText = 'Out of Stock';
+                                        } elseif ($product->quantity <= 5) {
+                                            $stockColor = 'warning';
+                                            $stockText = $product->quantity . ' (Low)';
+                                        }
+                                    @endphp
+                                    <span class="badge bg-{{ $stockColor }}">
+                                        {{ $stockText }}
+                                    </span>
+                                </td>
                                 <td>
                                     <span class="badge bg-{{ $product->status === 'active' ? 'success' : 'secondary' }}">
                                         {{ ucfirst($product->status) }}
