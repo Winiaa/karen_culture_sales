@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 class Product extends Model
 {
@@ -119,5 +120,21 @@ class Product extends Model
     public function setNameAttribute($value): void
     {
         $this->attributes['title'] = $value;
+    }
+
+    /**
+     * Get the total number of orders for this product.
+     */
+    public function getOrdersCountAttribute()
+    {
+        return $this->orderItems()->count();
+    }
+
+    /**
+     * Get the total revenue for this product.
+     */
+    public function getTotalRevenueAttribute()
+    {
+        return $this->orderItems()->sum('subtotal');
     }
 }

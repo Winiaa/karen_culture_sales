@@ -246,23 +246,6 @@
                     </div>
                     @endif
                     
-                    @if($order->delivery->notes)
-                    <div class="mb-3">
-                        <strong>Delivery Instructions:</strong><br>
-                        {{ $order->delivery->notes }}
-                    </div>
-                    @endif
-                    
-                    @if($order->delivery->delivered_at)
-                    <div class="mb-3">
-                        <strong>Delivery Confirmation:</strong><br>
-                        <div class="text-success">
-                            <i class="fas fa-check-circle me-1"></i> Delivered on {{ $order->delivery->delivered_at->format('M d, Y h:i A') }}
-                        </div>
-                    </div>
-                    @endif
-                    
-                    @if($order->delivery->tracking_number)
                     <div class="mt-4 pt-3 border-top">
                         <h6><i class="fas fa-shipping-fast me-2"></i>Tracking Information</h6>
                         <div class="mb-3">
@@ -300,6 +283,21 @@
                                 @endif
                             </div>
                             @endif
+                        </div>
+                    </div>
+                    
+                    @if($order->delivery->notes)
+                    <div class="mb-3">
+                        <strong>Delivery Instructions:</strong><br>
+                        {{ $order->delivery->notes }}
+                    </div>
+                    @endif
+                    
+                    @if($order->delivery->delivered_at)
+                    <div class="mb-3">
+                        <strong>Delivery Confirmation:</strong><br>
+                        <div class="text-success">
+                            <i class="fas fa-check-circle me-1"></i> Delivered on {{ $order->delivery->delivered_at->format('M d, Y h:i A') }}
                         </div>
                     </div>
                     @endif

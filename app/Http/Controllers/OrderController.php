@@ -115,6 +115,20 @@ class OrderController extends Controller
             
             \Log::info('Order items created for order #' . $order->id);
 
+            // Create delivery record
+            $delivery = $order->delivery()->create([
+                'user_id' => $order->user_id,
+                'recipient_name' => $request->recipient_name,
+                'recipient_phone' => $request->recipient_phone,
+                'recipient_address' => $request->recipient_address,
+                'delivery_status' => 'pending',
+                'estimated_delivery_date' => now()->addDays(3), // Set default delivery time to 3 days from order date
+                'notes' => $request->notes ?? null,
+                'tracking_number' => 'TRK-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 10)) // Generate unique tracking number
+            ]);
+            
+            \Log::info('Delivery record created for order #' . $order->id);
+
             // Create payment record
             Payment::create([
                 'order_id' => $order->id,
@@ -123,18 +137,6 @@ class OrderController extends Controller
             ]);
             
             \Log::info('Payment record created for order #' . $order->id);
-            
-            // Create delivery record
-            $order->delivery()->create([
-                'user_id' => auth()->id(),
-                'tracking_number' => 'TRK-' . strtoupper(substr(md5(uniqid()), 0, 10)),
-                'recipient_name' => $request->recipient_name,
-                'recipient_phone' => $request->recipient_phone,
-                'recipient_address' => $request->recipient_address,
-                'delivery_status' => 'pending'
-            ]);
-            
-            \Log::info('Delivery record created for order #' . $order->id);
             
             // For Stripe payments, redirect to dedicated Stripe payment page
             if ($request->payment_method === 'stripe') {

@@ -120,7 +120,14 @@
                         </div>
                         <div class="mb-3">
                             <label for="recipient_address" class="form-label">Delivery Address</label>
-                            <textarea class="form-control" id="recipient_address" name="recipient_address" rows="3" required>{{ auth()->user()->default_shipping_address ?? old('recipient_address') }}</textarea>
+                            <textarea class="form-control" id="recipient_address" name="recipient_address" rows="4" placeholder="Please write a detailed delivery address including:
+- Street address
+- Building name (if applicable)
+- Floor/Unit number (if applicable)
+- Landmarks (if any)
+- City
+- Postal code" required>{{ auth()->user()->default_shipping_address ?? old('recipient_address') }}</textarea>
+                            <small class="text-muted">Please provide as much detail as possible to ensure accurate delivery.</small>
                         </div>
                         <div class="mb-3 form-check">
                             <input type="checkbox" class="form-check-input" id="save_shipping_info" name="save_shipping_info" value="1" {{ auth()->user()->save_shipping_info ? 'checked' : '' }}>

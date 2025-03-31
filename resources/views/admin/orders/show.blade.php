@@ -347,19 +347,7 @@
                 <div class="card-body">
                     <p class="mb-1"><strong>Name:</strong> {{ $order->user->name }}</p>
                     <p class="mb-1"><strong>Email:</strong> {{ $order->user->email }}</p>
-                    <p class="mb-1"><strong>Phone:</strong> {{ $order->user->phone ?? 'N/A' }}</p>
-                    <hr>
-                    <h6>Recipient Information</h6>
-                    @if($order->delivery)
-                    <p class="mb-1"><strong>Recipient Name:</strong> {{ $order->delivery->recipient_name }}</p>
-                    <p class="mb-1"><strong>Recipient Phone:</strong> {{ $order->delivery->recipient_phone }}</p>
-                    <address class="mb-0">
-                        <strong>Delivery Address:</strong><br>
-                        {{ $order->delivery->recipient_address }}
-                    </address>
-                    @else
-                    <p class="text-muted">No delivery information available</p>
-                    @endif
+                    <p class="mb-1"><strong>Phone:</strong> {{ $order->user->default_recipient_phone ?? 'N/A' }}</p>
                 </div>
             </div>
 

@@ -93,26 +93,54 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Order::with(['user', 'orderItems.product', 'payment']);
+        $query = Order::with(['user', 'payment', 'delivery'])
+            ->where(function($q) {
+                $q->whereHas('payment', function($q) {
+                    $q->where(function($q) {
+                        // Show all cash on delivery orders
+                        $q->where('payment_method', 'cash_on_delivery');
+                        // For credit card orders, only show completed payments
+                        $q->orWhere(function($q) {
+                            $q->where('payment_method', 'stripe')
+                              ->where('payment_status', 'completed');
+                        });
+                    });
+                });
+            });
 
+        // Add search functionality
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('id', 'like', "%{$search}%")
+                  ->orWhereHas('user', function($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Add status filter
         if ($request->has('status')) {
             $query->where('order_status', $request->status);
         }
 
-        if ($request->has('payment_status')) {
-            $query->where('payment_status', $request->payment_status);
-        }
-
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->whereHas('user', function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+        // Add payment method filter
+        if ($request->has('payment_method')) {
+            $query->whereHas('payment', function($q) use ($request) {
+                $q->where('payment_method', $request->payment_method);
             });
         }
 
-        $orders = $query->orderBy('created_at', 'desc')
-            ->paginate(20);
+        // Add date range filter
+        if ($request->has('start_date')) {
+            $query->whereDate('created_at', '>=', $request->start_date);
+        }
+        if ($request->has('end_date')) {
+            $query->whereDate('created_at', '<=', $request->end_date);
+        }
+
+        $orders = $query->latest()->paginate(15);
 
         return view('admin.orders.index', compact('orders'));
     }
@@ -122,6 +150,13 @@ class OrderController extends Controller
      */
     public function show(Order $order)
     {
+        // Check if this is a pending credit card payment
+        if ($order->payment && 
+            $order->payment->payment_method === 'stripe' && 
+            $order->payment->payment_status === 'pending') {
+            abort(404, 'Order not found');
+        }
+
         $order->load(['user', 'orderItems.product', 'payment', 'delivery']);
         return view('admin.orders.show', compact('order'));
     }

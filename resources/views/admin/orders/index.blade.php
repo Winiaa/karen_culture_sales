@@ -1,10 +1,15 @@
 @extends('layouts.admin')
 
 @section('title', 'Orders')
-@section('subtitle', 'Manage customer orders')
+@section('subtitle', 'Manage all orders')
 
 @section('content')
 <div class="container-fluid">
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>Note:</strong> Credit card orders will only appear here after successful payment. Cash on delivery orders are visible immediately.
+    </div>
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4>Orders List</h4>
     </div>
