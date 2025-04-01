@@ -7,6 +7,7 @@ use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
@@ -38,23 +39,15 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::with('category')
+        $query = Product::with(['category', 'reviews'])
             ->whereHas('category', function($query) {
                 $query->where('is_active', 1);
             })
             ->where('status', 'active');
 
+        // Apply filters
         if ($request->has('category')) {
-            $categoryId = $request->category;
-            // Check if the requested category is active
-            $isActive = Category::where('id', $categoryId)->where('is_active', 1)->exists();
-            if ($isActive) {
-                $query->where('category_id', $categoryId);
-            } else {
-                // If category is inactive, redirect with error
-                return redirect()->route('products.index')
-                    ->with('error', 'The selected category is not available.');
-            }
+            $query->where('category_id', $request->category);
         }
 
         if ($request->has('search')) {
@@ -65,6 +58,7 @@ class ProductController extends Controller
             });
         }
 
+        // Apply sorting
         if ($request->has('sort')) {
             switch ($request->sort) {
                 case 'price_asc':
@@ -73,22 +67,20 @@ class ProductController extends Controller
                 case 'price_desc':
                     $query->orderBy('price', 'desc');
                     break;
-                case 'newest':
-                    $query->orderBy('created_at', 'desc');
-                    break;
                 case 'popular':
-                    // Join with order_items table to count how many times a product has been ordered
                     $query->leftJoin('order_items', 'products.id', '=', 'order_items.product_id')
-                          ->select('products.*', \DB::raw('COUNT(order_items.id) as order_count'))
+                          ->select('products.*', DB::raw('COUNT(order_items.id) as order_count'))
                           ->groupBy('products.id')
                           ->orderBy('order_count', 'desc');
                     break;
                 default:
                     $query->orderBy('created_at', 'desc');
             }
+        } else {
+            $query->orderBy('created_at', 'desc');
         }
 
-        $products = Cache::remember('products.list', 3600, function () {
+        $products = Cache::remember('products.list', 3600, function () use ($query) {
             return $query->paginate(12);
         });
         $categories = Category::where('is_active', 1)->get();
@@ -174,16 +166,51 @@ class ProductController extends Controller
     /**
      * Display newest products.
      */
-    public function newArrivals()
+    public function newArrivals(Request $request)
     {
-        $products = Product::with('category')
+        $query = Product::with(['category', 'reviews'])
             ->whereHas('category', function($query) {
                 $query->where('is_active', 1);
             })
             ->where('status', 'active')
-            ->orderBy('created_at', 'desc')
-            ->paginate(12);
+            ->where('created_at', '>=', now()->subDays(30));
+
+        // Apply filters
+        if ($request->has('category')) {
+            $query->where('category_id', $request->category);
+        }
+
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        // Apply sorting
+        if ($request->has('sort')) {
+            switch ($request->sort) {
+                case 'price_asc':
+                    $query->orderBy('price', 'asc');
+                    break;
+                case 'price_desc':
+                    $query->orderBy('price', 'desc');
+                    break;
+                case 'popular':
+                    $query->leftJoin('order_items', 'products.id', '=', 'order_items.product_id')
+                          ->select('products.*', DB::raw('COUNT(order_items.id) as order_count'))
+                          ->groupBy('products.id')
+                          ->orderBy('order_count', 'desc');
+                    break;
+                default:
+                    $query->orderBy('created_at', 'desc');
+            }
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
             
+        $products = $query->paginate(12);
         $categories = Category::where('is_active', 1)->get();
         
         return view('products.new-arrivals', compact('products', 'categories'));
@@ -192,19 +219,51 @@ class ProductController extends Controller
     /**
      * Display best selling products.
      */
-    public function bestSellers()
+    public function bestSellers(Request $request)
     {
-        $products = Product::with('category')
+        $query = Product::with(['category', 'reviews'])
             ->whereHas('category', function($query) {
                 $query->where('is_active', 1);
             })
             ->where('status', 'active')
             ->leftJoin('order_items', 'products.id', '=', 'order_items.product_id')
-            ->select('products.*', \DB::raw('COUNT(order_items.id) as order_count'))
+            ->select('products.*', DB::raw('COUNT(order_items.id) as order_count'))
             ->groupBy('products.id')
-            ->orderBy('order_count', 'desc')
-            ->paginate(12);
+            ->having('order_count', '>', 0);
+
+        // Apply filters
+        if ($request->has('category')) {
+            $query->where('category_id', $request->category);
+        }
+
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        // Apply sorting
+        if ($request->has('sort')) {
+            switch ($request->sort) {
+                case 'newest':
+                    $query->orderBy('created_at', 'desc');
+                    break;
+                case 'price_asc':
+                    $query->orderBy('price', 'asc');
+                    break;
+                case 'price_desc':
+                    $query->orderBy('price', 'desc');
+                    break;
+                default:
+                    $query->orderBy('order_count', 'desc');
+            }
+        } else {
+            $query->orderBy('order_count', 'desc');
+        }
             
+        $products = $query->paginate(12);
         $categories = Category::where('is_active', 1)->get();
         
         return view('products.best-sellers', compact('products', 'categories'));
