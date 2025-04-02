@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
@@ -53,9 +55,32 @@ class UserController extends Controller
             $query->orderBy('created_at', 'desc');
         }
 
-        $users = $query->paginate(15);
+        // Load active deliveries count for driver users
+        $users = $query->with(['driver' => function($query) {
+            $query->withCount(['activeDeliveries']);
+        }])->paginate(15);
 
         return view('admin.users.index', compact('users'));
+    }
+
+    public function show(User $user)
+    {
+        // Load relationships based on user type
+        if ($user->usertype === 'driver') {
+            $user->load(['driver' => function($query) {
+                $query->withCount(['activeDeliveries', 'completedDeliveries']);
+            }]);
+        } elseif ($user->usertype === 'customer') {
+            $user->load(['orders' => function($query) {
+                $query->with(['orderItems' => function($q) {
+                    $q->select('order_id', 'product_id', 'quantity', 'subtotal');
+                }])
+                ->latest()
+                ->take(5);
+            }]);
+        }
+
+        return view('admin.users.show', compact('user'));
     }
 
     /**
@@ -66,7 +91,7 @@ class UserController extends Controller
     private function isSuperAdmin()
     {
         // All admin users can now manage users
-        return auth()->user()->usertype === 'admin';
+        return Auth::user()->usertype === 'admin';
     }
 
     /**
@@ -76,7 +101,7 @@ class UserController extends Controller
     private function hasUserManagementPermission()
     {
         // All admin users can now manage users
-        return auth()->user()->usertype === 'admin';
+        return Auth::user()->usertype === 'admin';
     }
 
     /**
@@ -108,9 +133,9 @@ class UserController extends Controller
         ]);
 
         // Log admin activity
-        \Log::info('Admin created new user', [
-            'admin_id' => auth()->id(),
-            'admin_name' => auth()->user()->name,
+        Log::info('Admin created new user', [
+            'admin_id' => Auth::id(),
+            'admin_name' => Auth::user()->name,
             'new_user_id' => $user->id,
             'new_user_email' => $user->email,
             'new_user_type' => $user->usertype
@@ -161,9 +186,9 @@ class UserController extends Controller
         $user->update($data);
         
         // Log admin activity
-        \Log::info('Admin user update', [
-            'admin_id' => auth()->id(),
-            'admin_name' => auth()->user()->name,
+        Log::info('Admin user update', [
+            'admin_id' => Auth::id(),
+            'admin_name' => Auth::user()->name,
             'target_user_id' => $user->id,
             'changes' => $changes
         ]);
@@ -178,15 +203,15 @@ class UserController extends Controller
     public function destroy(User $user)
     {
         // Prevent deleting own account
-        if ($user->id === auth()->id()) {
+        if ($user->id === Auth::id()) {
             return redirect()->route('admin.users.index')
                 ->with('error', 'You cannot delete your own account.');
         }
 
         // Log before deletion
-        \Log::warning('Admin deleted user', [
-            'admin_id' => auth()->id(),
-            'admin_name' => auth()->user()->name,
+        Log::warning('Admin deleted user', [
+            'admin_id' => Auth::id(),
+            'admin_name' => Auth::user()->name,
             'deleted_user_id' => $user->id,
             'deleted_user_email' => $user->email,
             'deleted_user_type' => $user->usertype
