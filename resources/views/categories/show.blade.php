@@ -9,15 +9,6 @@
         </ol>
     </nav>
 
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <h1>{{ $category->name }}</h1>
-            @if($category->description)
-                <p class="lead">{{ $category->description }}</p>
-            @endif
-        </div>
-    </div>
-
     <div class="row">
         <!-- Sidebar Filters -->
         <div class="col-md-3">
@@ -55,7 +46,7 @@
         <!-- Products Grid -->
         <div class="col-md-9">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>{{ $category->name }} Products</h2>
+                <h1>{{ $category->name }}</h1>
                 <span>{{ $products->total() }} products found</span>
             </div>
             
