@@ -58,7 +58,7 @@
 
             <div class="row">
                 @forelse($products as $product)
-                <div class="col-md-4 mb-4">
+                <div class="col-12 col-md-6 col-lg-4 mb-4">
                     <div class="position-relative">
                         @if($product->created_at->diffInDays(now()) <= 30)
                             <div class="position-absolute top-0 start-0 m-2 z-1">

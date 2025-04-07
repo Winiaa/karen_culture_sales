@@ -34,7 +34,7 @@
     @endif
 
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-12">
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">Product Information</h6>
@@ -115,22 +115,6 @@
                                 <h3 class="mb-0">{{ number_format($product->average_rating, 1) }}</h3>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Actions</h6>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <button type="button" class="btn btn-danger delete-btn" 
-                                data-delete-url="{{ route('admin.products.destroy', $product) }}">
-                            <i class="fas fa-trash"></i> Delete Product
-                        </button>
                     </div>
                 </div>
             </div>

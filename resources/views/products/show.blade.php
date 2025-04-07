@@ -401,13 +401,13 @@
                 <div class="product-image-slider">
                     @if($product->image)
                         <div class="slide active">
-                            <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->title }}" class="main-product-image">
+                            <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->title }}" class="main-product-image" onclick="openLightbox(0)">
                         </div>
                     @endif
                     @if(!empty($product->additional_images) && is_array($product->additional_images))
-                        @foreach($product->additional_images as $image)
+                        @foreach($product->additional_images as $index => $image)
                             <div class="slide">
-                                <img src="{{ asset('storage/' . $image) }}" alt="{{ $product->title }}" class="main-product-image">
+                                <img src="{{ asset('storage/' . $image) }}" alt="{{ $product->title }}" class="main-product-image" onclick="openLightbox({{ $index + 1 }})">
                             </div>
                         @endforeach
                     @endif
@@ -944,6 +944,18 @@
                 editModal.show();
             };
         });
+    </script>
+
+    <script>
+        /**
+         * Open the lightbox modal with the specified image
+         * @param {number} index - Index of the image to show
+         */
+        window.openLightbox = function(index) {
+            window.selectedImageIndex = index;
+            const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
+            imageModal.show();
+        };
     </script>
 @endsection
 

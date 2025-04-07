@@ -9,7 +9,8 @@ use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Intervention\Image\Facades\Image;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
@@ -83,6 +84,7 @@ class ProductController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
+            'discount_price' => 'nullable|numeric|min:0|lt:price',
             'quantity' => 'required|integer|min:0',
             'category_id' => 'required|exists:categories,id',
             'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -92,13 +94,16 @@ class ProductController extends Controller
         try {
             DB::beginTransaction();
 
+            // Create image manager
+            $manager = new ImageManager(new Driver());
+
             // Handle main image
             if ($request->hasFile('image')) {
                 $image = $request->file('image');
                 $filename = time() . '_' . $image->getClientOriginalName();
                 
                 // Optimize and save the image
-                $img = Image::make($image)
+                $img = $manager->read($image)
                     ->resize(800, null, function ($constraint) {
                         $constraint->aspectRatio();
                         $constraint->upsize();
@@ -115,7 +120,7 @@ class ProductController extends Controller
                     $filename = time() . '_' . $image->getClientOriginalName();
                     
                     // Optimize and save each additional image
-                    $img = Image::make($image)
+                    $img = $manager->read($image)
                         ->resize(800, null, function ($constraint) {
                             $constraint->aspectRatio();
                             $constraint->upsize();
@@ -132,6 +137,7 @@ class ProductController extends Controller
                 'slug' => Str::slug($request->title),
                 'description' => $request->description,
                 'price' => $request->price,
+                'discount_price' => $request->discount_price,
                 'quantity' => $request->quantity,
                 'category_id' => $request->category_id,
                 'image' => $imagePath ?? null,
@@ -177,6 +183,7 @@ class ProductController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
+            'discount_price' => 'nullable|numeric|min:0|lt:price',
             'quantity' => 'required|integer|min:0',
             'category_id' => 'required|exists:categories,id',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -185,6 +192,9 @@ class ProductController extends Controller
 
         try {
             DB::beginTransaction();
+
+            // Create image manager
+            $manager = new ImageManager(new Driver());
 
             // Handle main image
             if ($request->hasFile('image')) {
@@ -197,7 +207,7 @@ class ProductController extends Controller
                 $filename = time() . '_' . $image->getClientOriginalName();
                 
                 // Optimize and save the new image
-                $img = Image::make($image)
+                $img = $manager->read($image)
                     ->resize(800, null, function ($constraint) {
                         $constraint->aspectRatio();
                         $constraint->upsize();
@@ -211,18 +221,45 @@ class ProductController extends Controller
 
             // Handle additional images
             $additionalImages = $product->additional_images ?? [];
-            if ($request->hasFile('additional_images')) {
-                // Delete old additional images
-                foreach ($product->additional_images ?? [] as $oldImage) {
-                    Storage::delete('public/' . $oldImage);
+            
+            // Handle deletion of additional images
+            if ($request->has('delete_images') && is_array($request->delete_images)) {
+                // Filter out any null values and empty strings from the delete_images array
+                $deleteImages = array_filter($request->delete_images, function($value) {
+                    return $value !== null && $value !== '';
+                });
+                
+                // Log for debugging
+                \Illuminate\Support\Facades\Log::info('Images to delete: ' . json_encode($deleteImages));
+                \Illuminate\Support\Facades\Log::info('Current additional images: ' . json_encode($additionalImages));
+                
+                foreach ($deleteImages as $imageToDelete) {
+                    // Remove from storage
+                    if (Storage::disk('public')->exists($imageToDelete)) {
+                        Storage::disk('public')->delete($imageToDelete);
+                        \Illuminate\Support\Facades\Log::info('Deleted image from storage: ' . $imageToDelete);
+                    }
+                    
+                    // Remove from array
+                    $additionalImages = array_filter($additionalImages, function($img) use ($imageToDelete) {
+                        return $img !== $imageToDelete;
+                    });
                 }
-
-                $additionalImages = [];
+                
+                // Reindex the array to ensure sequential keys
+                $additionalImages = array_values($additionalImages);
+                
+                // Log for debugging
+                \Illuminate\Support\Facades\Log::info('Remaining additional images: ' . json_encode($additionalImages));
+            }
+            
+            // Handle new additional images
+            if ($request->hasFile('additional_images')) {
                 foreach ($request->file('additional_images') as $image) {
                     $filename = time() . '_' . $image->getClientOriginalName();
                     
                     // Optimize and save each additional image
-                    $img = Image::make($image)
+                    $img = $manager->read($image)
                         ->resize(800, null, function ($constraint) {
                             $constraint->aspectRatio();
                             $constraint->upsize();
@@ -239,10 +276,11 @@ class ProductController extends Controller
                 'slug' => Str::slug($request->title),
                 'description' => $request->description,
                 'price' => $request->price,
+                'discount_price' => $request->discount_price,
                 'quantity' => $request->quantity,
                 'category_id' => $request->category_id,
                 'image' => $imagePath,
-                'additional_images' => !empty($additionalImages) ? $additionalImages : null,
+                'additional_images' => !empty($additionalImages) ? array_values($additionalImages) : null,
                 'status' => $request->status ?? 'active'
             ]);
 
@@ -282,7 +320,7 @@ class ProductController extends Controller
             return redirect()->route('admin.products.index')
                 ->with('success', 'Product deleted successfully.');
         } catch (\Exception $e) {
-            \Log::error('Error deleting product: ' . $e->getMessage());
+            Log::error('Error deleting product: ' . $e->getMessage());
             return redirect()->back()
                 ->with('error', 'Error deleting product: ' . $e->getMessage());
         }

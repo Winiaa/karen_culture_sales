@@ -29,7 +29,7 @@
     @endif
 
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-12">
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">Product Details</h6>
@@ -62,7 +62,7 @@
                                 <div class="mb-3">
                                     <label for="price" class="form-label">Price</label>
                                     <div class="input-group">
-                                        <span class="input-group-text">$</span>
+                                        <span class="input-group-text">฿</span>
                                         <input type="number" step="0.01" class="form-control @error('price') is-invalid @enderror" 
                                                id="price" name="price" value="{{ old('price', $product->price) }}" required>
                                         @error('price')
@@ -73,6 +73,23 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
+                                    <label for="discount_price" class="form-label">Discount Price (Optional)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">฿</span>
+                                        <input type="number" step="0.01" class="form-control @error('discount_price') is-invalid @enderror" 
+                                               id="discount_price" name="discount_price" value="{{ old('discount_price', $product->discount_price) }}">
+                                        @error('discount_price')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                    <div class="form-text">Leave empty if no discount is available.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
                                     <label for="quantity" class="form-label">Stock</label>
                                     <input type="number" class="form-control @error('quantity') is-invalid @enderror" 
                                            id="quantity" name="quantity" value="{{ old('quantity', $product->quantity) }}" required>
@@ -81,9 +98,6 @@
                                     @enderror
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="category_id" class="form-label">Category</label>
@@ -102,6 +116,9 @@
                                     @enderror
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="status" class="form-label">Status</label>
@@ -127,7 +144,7 @@
                             @if($product->image)
                                 <div class="mt-2">
                                     <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->title }}" 
-                                         class="img-thumbnail" style="max-height: 200px;">
+                                         class="img-thumbnail main-product-image">
                                 </div>
                             @endif
                         </div>
@@ -145,21 +162,19 @@
                             @if(!empty($product->additional_images))
                                 <div class="mt-3">
                                     <h6>Current Additional Images:</h6>
-                                    <div class="row">
+                                    <div class="additional-images-grid">
                                         @foreach($product->additional_images as $index => $imagePath)
-                                            <div class="col-md-4 mb-2">
-                                                <div class="position-relative">
+                                            <div class="additional-image-item">
+                                                <div class="position-relative image-container">
                                                     <img src="{{ asset('storage/' . $imagePath) }}" 
                                                          alt="Additional Image {{ $index + 1 }}" 
-                                                         class="img-thumbnail" style="max-height: 150px;">
-                                                    <div class="form-check position-absolute top-0 end-0 m-2">
-                                                        <input type="checkbox" class="form-check-input" 
-                                                               name="delete_images[]" value="{{ $imagePath }}" 
-                                                               id="delete_image_{{ $index }}">
-                                                        <label class="form-check-label" for="delete_image_{{ $index }}">
-                                                            Delete
-                                                        </label>
+                                                         class="img-thumbnail additional-image">
+                                                    <div class="delete-badge" data-image-path="{{ $imagePath }}" 
+                                                         data-image-index="{{ $index }}">
+                                                        <i class="fas fa-trash"></i>
                                                     </div>
+                                                    <input type="hidden" name="delete_images[]" value="{{ $imagePath }}" 
+                                                           id="delete_image_{{ $index }}" class="delete-image-input">
                                                 </div>
                                             </div>
                                         @endforeach
@@ -168,47 +183,54 @@
                             @endif
                         </div>
 
-                        <div class="d-flex justify-content-between">
+                        <div class="d-flex justify-content-end">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save"></i> Update Product
-                            </button>
-                            <button type="button" class="btn btn-danger delete-btn" 
-                                    data-delete-url="{{ route('admin.products.destroy', $product) }}">
-                                <i class="fas fa-trash"></i> Delete Product
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
-
-        <div class="col-md-4">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Product Statistics</h6>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <h6 class="text-muted mb-2">Total Orders</h6>
-                        <h3 class="mb-0">{{ $product->orders_count }}</h3>
-                    </div>
-                    <div class="mb-3">
-                        <h6 class="text-muted mb-2">Total Revenue</h6>
-                        <h3 class="mb-0">${{ number_format($product->total_revenue, 2) }}</h3>
-                    </div>
-                    <div class="mb-3">
-                        <h6 class="text-muted mb-2">Average Rating</h6>
-                        <h3 class="mb-0">{{ number_format($product->average_rating, 1) }}</h3>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
-
-<!-- Include the delete confirmation modal -->
-<x-delete-confirmation-modal />
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle delete image badges
+        const deleteBadges = document.querySelectorAll('.delete-badge');
+        
+        // Initialize all delete inputs to empty
+        deleteBadges.forEach(badge => {
+            const imageIndex = badge.getAttribute('data-image-index');
+            const inputField = document.getElementById(`delete_image_${imageIndex}`);
+            inputField.value = ''; // Ensure all inputs start empty
+        });
+        
+        // Add click event to each badge
+        deleteBadges.forEach(badge => {
+            badge.addEventListener('click', function() {
+                const imagePath = this.getAttribute('data-image-path');
+                const imageIndex = this.getAttribute('data-image-index');
+                const inputField = document.getElementById(`delete_image_${imageIndex}`);
+                
+                // Toggle the active state of this badge only
+                if (this.classList.contains('active')) {
+                    // Unmark for deletion
+                    inputField.value = '';
+                    this.classList.remove('active');
+                } else {
+                    // Mark for deletion
+                    inputField.value = imagePath;
+                    this.classList.add('active');
+                }
+            });
+        });
+    });
+</script>
+@endpush
 
 @push('styles')
 <style>
@@ -222,6 +244,77 @@
     }
     .alert .btn-close {
         padding: 1.25rem;
+    }
+    .main-product-image {
+        max-height: 200px;
+        width: auto;
+        display: block;
+        margin-bottom: 1rem;
+    }
+    
+    /* Additional Images Grid Layout */
+    .additional-images-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 2px;
+        margin-bottom: 1rem;
+    }
+    
+    .additional-image-item {
+        width: 100%;
+    }
+    
+    .image-container {
+        position: relative;
+        overflow: hidden;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        width: 100%;
+        padding-bottom: 100%; /* Creates a square aspect ratio */
+        margin: 0;
+    }
+    
+    .additional-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .delete-badge {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 24px;
+        height: 24px;
+        background-color: rgba(13, 110, 253, 0.9);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 10px;
+        transition: all 0.2s;
+        z-index: 10;
+        opacity: 0;
+    }
+    
+    .image-container:hover .delete-badge {
+        opacity: 1;
+    }
+    
+    .delete-badge:hover {
+        background-color: #0d6efd;
+        transform: translate(-50%, -50%) scale(1.1);
+    }
+    
+    .delete-badge.active {
+        background-color: #dc3545;
+        opacity: 1;
     }
 </style>
 @endpush 

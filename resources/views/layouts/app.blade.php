@@ -244,11 +244,50 @@
             /* Product listing */
             .product-card {
                 height: 100%;
+                transition: all 0.3s ease;
             }
             
             .product-card .card-img-top {
                 height: 200px;
                 object-fit: cover;
+            }
+            
+            /* Responsive adjustments for product cards */
+            @media (max-width: 767.98px) {
+                .product-card .card-img-top {
+                    height: 180px;
+                }
+                
+                .product-card .card-title {
+                    font-size: 1rem;
+                }
+                
+                .product-card .rating {
+                    font-size: 0.9rem;
+                }
+                
+                .product-card .badge {
+                    font-size: 0.75rem;
+                }
+            }
+            
+            @media (max-width: 575.98px) {
+                .product-card .card-img-top {
+                    height: 160px;
+                }
+                
+                .product-card .card-body {
+                    padding: 0.75rem;
+                }
+                
+                .product-card .card-footer {
+                    padding: 0.75rem;
+                }
+                
+                .product-card .btn {
+                    padding: 0.375rem 0.75rem;
+                    font-size: 0.875rem;
+                }
             }
             
             /* Price styling */

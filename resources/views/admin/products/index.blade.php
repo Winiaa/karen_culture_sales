@@ -52,7 +52,7 @@
                                 </td>
                                 <td>{{ $product->name }}</td>
                                 <td>{{ $product->category->name }}</td>
-                                <td>${{ number_format($product->price, 2) }}</td>
+                                <td>฿{{ number_format($product->price, 2) }}</td>
                                 <td>
                                     @php
                                         $stockColor = 'success';
