@@ -37,6 +37,33 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
+        /* Stock level badge */
+        .stock-badge {
+            font-size: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            display: inline-block;
+            margin: 1rem 0;
+        }
+
+        .stock-badge.low {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+
+        .stock-badge.out {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .stock-badge.in {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
         /* Slider styling */
         .product-image-slider {
             position: relative;
@@ -59,6 +86,7 @@
             justify-content: center;
             gap: 10px;
             margin-top: 15px;
+            flex-wrap: wrap;
         }
 
         .thumbnail {
@@ -190,6 +218,84 @@
         .product-image-slider .slide img {
             cursor: zoom-in;
         }
+
+        /* Reviews section styling */
+        .reviews-section {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid #eee;
+        }
+
+        .review-card {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .review-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .review-author {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .review-author img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .review-rating {
+            color: #ffc107;
+        }
+
+        .review-date {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .review-content {
+            color: #212529;
+            line-height: 1.6;
+        }
+
+        /* Review form styling */
+        .review-form {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .review-stars {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .review-star {
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #ffc107;
+            transition: all 0.2s ease;
+        }
+
+        .review-star:hover {
+            transform: scale(1.1);
+        }
     </style>
 @endsection
 
@@ -288,420 +394,224 @@
         }
     </script>
 
-    <div class="container">
-        <nav aria-label="breadcrumb" class="mb-4">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('home') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('products.index') }}">Products</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('categories.show', $product->category) }}">{{ $product->category->category_name }}</a></li>
-                <li class="breadcrumb-item active" aria-current="page">{{ $product->title }}</li>
-            </ol>
-        </nav>
-
+    <div class="container py-5">
         <div class="row">
             <!-- Product Images -->
-            <div class="col-md-6 mb-4">
-                <div class="product-image-gallery">
-                    <div class="product-image-slider">
-                        <!-- Main image as first slide -->
+            <div class="col-md-6">
+                <div class="product-image-slider">
+                    @if($product->image)
                         <div class="slide active">
-                            <img src="{{ Storage::url($product->image) }}" class="main-product-image d-block w-100" alt="{{ $product->title }}">
+                            <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->title }}" class="main-product-image">
                         </div>
-
-                        <!-- Additional images as additional slides -->
-                        @if(!empty($product->additional_images) && is_array($product->additional_images))
-                            @foreach($product->additional_images as $index => $imagePath)
-                                <div class="slide">
-                                    <img src="{{ Storage::url($imagePath) }}" class="main-product-image d-block w-100" alt="{{ $product->title }}">
-                                </div>
-                            @endforeach
-                        @endif
-
-                        <!-- Slider Controls - show only if there are additional images -->
-                        @if(!empty($product->additional_images) && is_array($product->additional_images) && count($product->additional_images) > 0)
-                            <div class="slider-controls">
-                                <button type="button" class="slider-control prev" id="prev-slide" onclick="prevSlide()" aria-label="Previous image">
-                                    <i class="fas fa-chevron-left"></i>
-                                </button>
-                                <button type="button" class="slider-control next" id="next-slide" onclick="nextSlide()" aria-label="Next image">
-                                    <i class="fas fa-chevron-right"></i>
-                                </button>
+                    @endif
+                    @if(!empty($product->additional_images) && is_array($product->additional_images))
+                        @foreach($product->additional_images as $image)
+                            <div class="slide">
+                                <img src="{{ asset('storage/' . $image) }}" alt="{{ $product->title }}" class="main-product-image">
                             </div>
-
-                            <!-- Inline script to ensure navigation functions are available immediately -->
-                            <script>
-                                // Immediate navigation functions
-                                function prevSlide() {
-                                    const slides = document.querySelectorAll('.product-image-slider .slide');
-                                    const thumbnails = document.querySelectorAll('.thumbnail-nav .thumbnail');
-                                    let currentIndex = 0;
-
-                                    // Find the current active slide
-                                    for (let i = 0; i < slides.length; i++) {
-                                        if (slides[i].classList.contains('active')) {
-                                            currentIndex = i;
-                                            break;
-                                        }
-                                    }
-
-                                    // Calculate new index
-                                    let newIndex = currentIndex - 1;
-                                    if (newIndex < 0) newIndex = slides.length - 1;
-
-                                    // Update slides
-                                    for (let i = 0; i < slides.length; i++) {
-                                        slides[i].style.display = 'none';
-                                        slides[i].classList.remove('active');
-                                        if (thumbnails[i]) thumbnails[i].classList.remove('active');
-                                    }
-
-                                    // Show new slide
-                                    slides[newIndex].style.display = 'block';
-                                    slides[newIndex].classList.add('active');
-                                    if (thumbnails[newIndex]) thumbnails[newIndex].classList.add('active');
-                                }
-
-                                function nextSlide() {
-                                    const slides = document.querySelectorAll('.product-image-slider .slide');
-                                    const thumbnails = document.querySelectorAll('.thumbnail-nav .thumbnail');
-                                    let currentIndex = 0;
-
-                                    // Find the current active slide
-                                    for (let i = 0; i < slides.length; i++) {
-                                        if (slides[i].classList.contains('active')) {
-                                            currentIndex = i;
-                                            break;
-                                        }
-                                    }
-
-                                    // Calculate new index
-                                    let newIndex = currentIndex + 1;
-                                    if (newIndex >= slides.length) newIndex = 0;
-
-                                    // Update slides
-                                    for (let i = 0; i < slides.length; i++) {
-                                        slides[i].style.display = 'none';
-                                        slides[i].classList.remove('active');
-                                        if (thumbnails[i]) thumbnails[i].classList.remove('active');
-                                    }
-
-                                    // Show new slide
-                                    slides[newIndex].style.display = 'block';
-                                    slides[newIndex].classList.add('active');
-                                    if (thumbnails[newIndex]) thumbnails[newIndex].classList.add('active');
-                                }
-                            </script>
-                        @endif
-                    </div>
-
-                    <!-- Thumbnail Navigation - show only if there are additional images -->
-                    @if(!empty($product->additional_images) && is_array($product->additional_images) && count($product->additional_images) > 0)
-                        <div class="thumbnail-nav">
-                            <!-- Main image thumbnail -->
-                            <img src="{{ Storage::url($product->image) }}" class="thumbnail active" alt="{{ $product->title }}" data-index="0" onclick="showThumbnail(0)">
-
-                            <!-- Additional image thumbnails -->
-                            @foreach($product->additional_images as $index => $imagePath)
-                                <img src="{{ Storage::url($imagePath) }}" class="thumbnail" alt="{{ $product->title }}" data-index="{{ $index + 1 }}" onclick="showThumbnail({{ $index + 1 }})">
-                            @endforeach
-                        </div>
-
-                        <!-- Thumbnail click function -->
-                        <script>
-                            function showThumbnail(index) {
-                                const slides = document.querySelectorAll('.product-image-slider .slide');
-                                const thumbnails = document.querySelectorAll('.thumbnail-nav .thumbnail');
-
-                                // Hide all slides
-                                for (let i = 0; i < slides.length; i++) {
-                                    slides[i].style.display = 'none';
-                                    slides[i].classList.remove('active');
-                                    thumbnails[i].classList.remove('active');
-                                }
-
-                                // Show selected slide
-                                slides[index].style.display = 'block';
-                                slides[index].classList.add('active');
-                                thumbnails[index].classList.add('active');
-                            }
-                        </script>
+                        @endforeach
                     @endif
                 </div>
+                @if(!empty($product->additional_images) && is_array($product->additional_images) && count($product->additional_images) > 0)
+                    <div class="thumbnail-nav mt-3">
+                        @if($product->image)
+                            <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->title }}" class="thumbnail active" data-index="0">
+                        @endif
+                        @foreach($product->additional_images as $index => $image)
+                            <img src="{{ asset('storage/' . $image) }}" alt="{{ $product->title }}" class="thumbnail" data-index="{{ $index + 1}}">
+                        @endforeach
+                    </div>
+                @endif
             </div>
 
             <!-- Product Details -->
-            <div class="col-md-6 mb-4">
+            <div class="col-md-6">
                 <h1 class="mb-3">{{ $product->title }}</h1>
+                <p class="text-muted mb-3">Category: {{ $product->category->category_name }}</p>
 
-                <div class="mb-3">
-                    <span class="badge bg-secondary">{{ $product->category->category_name }}</span>
-                    <div class="rating d-inline-block ms-2">
-                        @for($i = 1; $i <= 5; $i++)
-                            <i class="{{ $i <= $product->average_rating ? 'fas fa-star' : 'far fa-star' }}"></i>
-                        @endfor
-                        <span class="ms-2">{{ number_format($product->average_rating, 1) }} ({{ $product->reviews->count() }} reviews)</span>
-                    </div>
+                <!-- Stock Level Display -->
+                @php
+                    $stockClass = 'in';
+                    $stockText = $product->quantity . ' in stock';
+                    
+                    if ($product->quantity <= 0) {
+                        $stockClass = 'out';
+                        $stockText = 'Out of Stock';
+                    } elseif ($product->quantity <= 5) {
+                        $stockClass = 'low';
+                        $stockText = 'Only ' . $product->quantity . ' left in stock';
+                    }
+                @endphp
+                <div class="stock-badge {{ $stockClass }}">
+                    <i class="fas fa-box me-2"></i>{{ $stockText }}
                 </div>
 
-                <div class="mb-3">
+                <!-- Price -->
+                <div class="mb-4">
                     @if($product->discount_price)
-                        <h3>
-                            <span class="text-danger">@baht($product->discount_price)</span>
-                            <small class="text-muted text-decoration-line-through">@baht($product->price)</small>
-                        </h3>
+                        <span class="text-muted text-decoration-line-through h4">@baht($product->price)</span>
+                        <span class="text-danger h3 ms-2">@baht($product->discount_price)</span>
                     @else
-                        <h3>@baht($product->price)</h3>
+                        <span class="h3">@baht($product->price)</span>
                     @endif
                 </div>
 
-                <div class="mb-4">
-                    <p class="mb-2">Availability:
-                        @if($product->in_stock)
-                            <span class="text-success">In Stock ({{ $product->quantity }} available)</span>
-                        @else
-                            <span class="text-danger">Out of Stock</span>
-                        @endif
-                    </p>
-                </div>
-
-                @if($product->in_stock)
-                    <form action="{{ route('cart.add', $product) }}" method="POST" class="mb-4">
-                        @csrf
-                        <div class="row g-3 align-items-center">
-                            <div class="col-auto">
-                                <label for="quantity" class="form-label">Quantity:</label>
-                            </div>
-                            <div class="col-auto">
-                                <input type="number" class="form-control" id="quantity" name="quantity" value="1" min="1" max="{{ $product->quantity }}">
-                            </div>
-                            <div class="col-auto">
-                                <button type="submit" class="btn btn-karen" onclick="this.innerHTML = '<i class=\'fas fa-check me-1\'></i>Alright!'; this.classList.add('added'); return true;">
-                                    <i class="fas fa-shopping-cart me-2"></i>Add to Cart
-                                </button>
-                            </div>
+                <!-- Add to Cart Form -->
+                <form action="{{ route('cart.add', $product) }}" method="POST" class="mb-4">
+                    @csrf
+                    <div class="row g-3 align-items-center">
+                        <div class="col-auto">
+                            <label for="quantity" class="col-form-label">Quantity:</label>
                         </div>
-                    </form>
-                @endif
+                        <div class="col-auto">
+                            <input type="number" id="quantity" name="quantity" class="form-control" value="1" min="1" max="{{ $product->quantity }}" {{ $product->quantity <= 0 ? 'disabled' : '' }}>
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-karen btn-lg" {{ $product->quantity <= 0 ? 'disabled' : '' }}>
+                                <i class="fas fa-cart-plus me-2"></i>Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </form>
 
+                <!-- Description -->
                 <div class="mb-4">
-                    <h4>Product Description</h4>
+                    <h4>Description</h4>
                     <p>{{ $product->description }}</p>
                 </div>
             </div>
         </div>
 
         <!-- Reviews Section -->
-        <div class="row mt-5">
-            <div class="col-12">
-                <h3 class="mb-4">Customer Reviews</h3>
-
-                @auth
-                    <div class="card mb-4">
-                        <div class="card-body">
-                            <h5 class="card-title">Write a Review</h5>
-                            <form action="{{ route('reviews.store', $product) }}" method="POST">
-                                @csrf
-                                <div class="mb-3">
-                                    <label class="form-label">Rating</label>
-                                    <div class="rating-input">
-                                        @for($i = 1; $i <= 5; $i++)
-                                            <span class="rating-star pe-1" data-rating="{{ $i }}"
-                                                  onclick="setRating({{ $i }}, this); document.getElementById('rating-input').value = {{ $i }}; return false;">
-                                    <i class="far fa-star text-muted fs-4"></i>
-                                </span>
-                                        @endfor
-                                        <span class="rating-text"></span>
-                                        <div class="rating-debug small text-muted mt-1"></div>
-                                    </div>
-                                    <input type="hidden" name="rating" id="rating-input" required>
-                                    @error('rating')
-                                    <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                                <div class="mb-3">
-                                    <label for="comment" class="form-label">Comment</label>
-                                    <textarea class="form-control" id="comment" name="comment" rows="3" required></textarea>
-                                </div>
-                                <button type="submit" class="btn btn-karen">Submit Review</button>
-                            </form>
-                        </div>
-                    </div>
-                @endauth
-
-                <div class="row">
-                    @forelse($product->reviews as $review)
-                        @if($review->status === 'approved' || (auth()->check() && $review->user_id === auth()->id()))
-                            <div class="col-md-6 mb-4">
-                                <div class="card h-100">
-                                    <div class="card-body">
-                                        <div class="d-flex justify-content-between mb-2">
-                                            <div class="rating">
-                                                @for($i = 1; $i <= 5; $i++)
-                                                    <i class="{{ $i <= $review->rating ? 'fas fa-star' : 'far fa-star' }}"></i>
-                                                @endfor
-                                            </div>
-                                            <div>
-                                                <small class="text-muted">{{ $review->created_at->diffForHumans() }}</small>
-                                                @if($review->status !== 'approved')
-                                                    <span class="badge bg-{{ $review->status === 'pending' ? 'warning' : 'danger' }} ms-2">
-                                                        {{ ucfirst($review->status) }}
-                                                    </span>
-                                                @endif
-                                            </div>
-                                        </div>
-                                        <div class="d-flex align-items-center mb-3">
-                                            <img src="{{ $review->user->profile_picture_url }}" alt="{{ $review->user->name }}" 
-                                                 class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
-                                            <h6 class="card-subtitle mb-0 text-muted">{{ $review->user->name }}</h6>
-                                        </div>
-                                        <p class="card-text">{{ $review->comment }}</p>
-
-                                        @if(auth()->check() && $review->canBeEditedBy(auth()->user()))
-                                            <div class="d-flex justify-content-end">
-                                                <button type="button" class="btn btn-sm btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#editReview{{ $review->id }}">
-                                                    <i class="fas fa-edit me-1"></i> Edit
-                                                </button>
-                                                <form action="{{ route('reviews.destroy', $review) }}" method="POST">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash me-1"></i> Delete</button>
-                                                </form>
-                                            </div>
-                                        @endif
-                                    </div>
-                                </div>
+        <div class="reviews-section">
+            <h3 class="mb-4">Customer Reviews</h3>
+            
+            <!-- Review Form -->
+            @auth
+                <div class="review-form mb-4">
+                    <h4 class="mb-3">Write a Review</h4>
+                    <form action="{{ route('reviews.store', $product) }}" method="POST">
+                        @csrf
+                        <div class="mb-3">
+                            <label class="form-label">Rating</label>
+                            <div class="rating-input">
+                                @for($i = 1; $i <= 5; $i++)
+                                    <span class="rating-star pe-1" data-rating="{{ $i }}"
+                                          onclick="setRating({{ $i }}, this); document.getElementById('rating-input').value = {{ $i }}; return false;">
+                                        <i class="far fa-star text-muted fs-4"></i>
+                                    </span>
+                                @endfor
+                                <span class="rating-text"></span>
                             </div>
-                        @endif
-                    @empty
-                        <div class="col-12">
-                            <div class="alert alert-info">
-                                No reviews yet. Be the first to review this product!
-                            </div>
+                            <input type="hidden" name="rating" id="rating-input" required>
+                            @error('rating')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                            @enderror
                         </div>
-                    @endforelse
+                        <div class="mb-3">
+                            <label for="comment" class="form-label">Your Review</label>
+                            <textarea class="form-control" id="comment" name="comment" rows="3" required></textarea>
+                            @error('comment')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <button type="submit" class="btn btn-karen">Submit Review</button>
+                    </form>
                 </div>
+            @endauth
+
+            <!-- Reviews List -->
+            <div class="reviews-list">
+                @forelse($product->reviews as $review)
+                    @if($review->status === 'approved' || (auth()->check() && $review->user_id === auth()->id()))
+                        <div class="review-card">
+                            <div class="review-header">
+                                <div class="review-author">
+                                    <img src="{{ $review->user->profile_picture_url }}" alt="{{ $review->user->name }}" class="rounded-circle">
+                                    <div>
+                                        <h5 class="mb-0">{{ $review->user->name }}</h5>
+                                        <div class="review-rating">
+                                            @for($i = 1; $i <= 5; $i++)
+                                                <i class="{{ $i <= $review->rating ? 'fas fa-star' : 'far fa-star' }}"></i>
+                                            @endfor
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="review-date">
+                                    {{ $review->created_at->diffForHumans() }}
+                                    @if($review->status !== 'approved')
+                                        <span class="badge bg-{{ $review->status === 'pending' ? 'warning' : 'danger' }} ms-2">
+                                            {{ ucfirst($review->status) }}
+                                        </span>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="review-content">
+                                {{ $review->comment }}
+                            </div>
+                            @if(auth()->check() && $review->canBeEditedBy(auth()->user()))
+                                <div class="mt-3">
+                                    <button type="button" class="btn btn-sm btn-outline-primary me-2" 
+                                            onclick="openEditModal({{ $review->id }}, '{{ addslashes($review->comment) }}', {{ $review->rating }})">
+                                        <i class="fas fa-edit me-1"></i> Edit
+                                    </button>
+                                    <form action="{{ route('reviews.destroy', $review) }}" method="POST" class="d-inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="fas fa-trash me-1"></i> Delete
+                                        </button>
+                                    </form>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
+                @empty
+                    <div class="alert alert-info">
+                        No reviews yet. Be the first to review this product!
+                    </div>
+                @endforelse
             </div>
         </div>
+    </div>
 
-        <!-- Review Modals - Placed outside of the main review content -->
-        @foreach($product->reviews as $review)
-            @if(auth()->check() && $review->canBeEditedBy(auth()->user()))
-                <!-- Edit Review Modal for {{ $review->id }} -->
-                <div class="modal fade" id="editReview{{ $review->id }}" tabindex="-1" aria-labelledby="editReviewLabel{{ $review->id }}" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="editReviewLabel{{ $review->id }}">Edit Your Review</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <!-- Edit Review Modal -->
+    <div class="modal fade" id="editReviewModal" tabindex="-1" aria-labelledby="editReviewModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editReviewModalLabel">Edit Your Review</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="edit-review-form" method="POST">
+                    @csrf
+                    @method('PUT')
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Rating</label>
+                            <div class="rating-input">
+                                @for($i = 1; $i <= 5; $i++)
+                                    <span class="rating-star pe-1" data-rating="{{ $i }}"
+                                          onclick="setEditRating({{ $i }}, this); document.getElementById('edit_rating').value = {{ $i }}; return false;">
+                                        <i class="far fa-star text-muted"></i>
+                                    </span>
+                                @endfor
+                                <span class="rating-text"></span>
                             </div>
-                            <form action="{{ route('reviews.update', $review) }}" method="POST">
-                                @csrf
-                                @method('PUT')
-                                <div class="modal-body">
-                                    <div class="mb-3">
-                                        <label class="form-label">Your Rating</label>
-                                        <div class="rating-input">
-                                            @for($i = 1; $i <= 5; $i++)
-                                                <span class="rating-star pe-1" data-rating="{{ $i }}"
-                                                      onclick="setEditRating({{ $i }}, this); document.getElementById('editRating{{ $review->id }}').value = {{ $i }}; return false;">
-                                        <i class="{{ $i <= $review->rating ? 'fas fa-star text-warning' : 'far fa-star text-muted' }}"></i>
-                                    </span>
-                                            @endfor
-                                            <span class="rating-text">
-                                        @php
-                                            $ratingText = '';
-                                            switch($review->rating) {
-                                                case 1: $ratingText = 'Poor'; break;
-                                                case 2: $ratingText = 'Fair'; break;
-                                                case 3: $ratingText = 'Average'; break;
-                                                case 4: $ratingText = 'Good'; break;
-                                                case 5: $ratingText = 'Excellent'; break;
-                                            }
-                                        @endphp
-                                                {{ $ratingText }}
-                                    </span>
-                                        </div>
-                                        <input type="hidden" name="rating" id="editRating{{ $review->id }}" value="{{ $review->rating }}" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="editComment{{ $review->id }}" class="form-label">Your Review</label>
-                                        <textarea class="form-control" id="editComment{{ $review->id }}" name="comment" rows="4" required>{{ $review->comment }}</textarea>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="submit" class="btn btn-karen">Save Changes</button>
-                                </div>
-                            </form>
+                            <input type="hidden" name="rating" id="edit_rating" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_content" class="form-label">Your Review</label>
+                            <textarea class="form-control" id="edit_content" name="comment" rows="3" required></textarea>
                         </div>
                     </div>
-                </div>
-            @endif
-        @endforeach
-
-        <!-- Related Products -->
-        @if(isset($relatedProducts) && is_object($relatedProducts) && method_exists($relatedProducts, 'isNotEmpty') && $relatedProducts->isNotEmpty())
-            <div class="row mt-5">
-                <div class="col-12">
-                    <h3 class="mb-4">Related Products</h3>
-                    <div class="row">
-                        @foreach($relatedProducts as $relatedProduct)
-                            <div class="col-md-3 mb-4">
-                                <div class="card product-card h-100">
-                                    @php
-                                        $relatedImageUrl = asset('images/placeholder.jpg');
-                                        try {
-                                            if(isset($relatedProduct->image) && $relatedProduct->image) {
-                                                $relatedImageUrl = Storage::url($relatedProduct->image);
-                                            }
-                                        } catch(\Exception $e) {
-                                            \Log::error('Error displaying related product image: ' . $e->getMessage());
-                                        }
-                                    @endphp
-                                    <img src="{{ $relatedImageUrl }}" class="card-img-top product-image" alt="{{ $relatedProduct->title }}">
-                                    <div class="card-body">
-                                        <h5 class="card-title">{{ $relatedProduct->title }}</h5>
-                                        <p class="card-text text-muted">{{ $relatedProduct->category->category_name }}</p>
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div>
-                                                @if($relatedProduct->discount_price)
-                                                    <span class="text-muted text-decoration-line-through">@baht($relatedProduct->price)</span>
-                                                    <span class="text-danger ms-2">@baht($relatedProduct->discount_price)</span>
-                                                @else
-                                                    <span class="text-dark">@baht($relatedProduct->price)</span>
-                                                @endif
-                                            </div>
-                                            <div class="rating">
-                                                @for($i = 1; $i <= 5; $i++)
-                                                    <i class="{{ $i <= $relatedProduct->average_rating ? 'fas fa-star' : 'far fa-star' }}"></i>
-                                                @endfor
-                                                @if($relatedProduct->reviews->count() > 0)
-                                                    <span class="ms-1 small">{{ number_format($relatedProduct->average_rating, 1) }} ({{ $relatedProduct->reviews->count() }})</span>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="card-footer bg-white border-top-0">
-                                        <div class="d-flex gap-2">
-                                            <a href="{{ route('products.show', $relatedProduct) }}" class="btn btn-outline-primary flex-grow-1">
-                                                <i class="fas fa-eye me-1"></i> View
-                                            </a>
-                                            <form action="{{ route('cart.add', $relatedProduct) }}" method="POST" class="flex-grow-1">
-                                                @csrf
-                                                <input type="hidden" name="quantity" value="1">
-                                                <button type="submit" class="btn btn-karen w-100" onclick="this.innerHTML = '<i class=\'fas fa-check me-1\'></i>Alright!'; this.classList.add('added'); return true;">
-                                                    <i class="fas fa-cart-plus me-1"></i> Add to Cart
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-karen">Save Changes</button>
                     </div>
-                </div>
+                </form>
             </div>
-        @endif
+        </div>
     </div>
 
     <!-- Lightbox Modal -->
@@ -749,22 +659,75 @@
          * Sets up modal triggers on product images
          */
         document.addEventListener('DOMContentLoaded', function() {
-            // Get all product images
-            const productImages = document.querySelectorAll('.product-image-slider .slide img');
+            const slides = document.querySelectorAll('.product-image-slider .slide');
+            const thumbnails = document.querySelectorAll('.thumbnail-nav .thumbnail');
+            
+            if (slides.length > 1) {
+                // Add navigation controls
+                const sliderControls = document.createElement('div');
+                sliderControls.className = 'slider-controls';
+                sliderControls.innerHTML = `
+                    <button type="button" class="slider-control prev" onclick="prevSlide()">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button type="button" class="slider-control next" onclick="nextSlide()">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                `;
+                document.querySelector('.product-image-slider').appendChild(sliderControls);
+            }
 
-            // Add data attributes and click handlers
-            productImages.forEach((img, index) => {
-                img.style.cursor = 'zoom-in';
-                img.setAttribute('data-bs-toggle', 'modal');
-                img.setAttribute('data-bs-target', '#imageModal');
-                img.setAttribute('data-slide-index', index.toString());
+            // Initialize with first slide
+            if (slides.length > 0) {
+                showSlide(0);
+            }
 
-                img.addEventListener('click', function() {
-                    // Store the index to use when modal is shown
-                    window.selectedImageIndex = index;
+            // Set up thumbnail clicks
+            thumbnails.forEach((thumb) => {
+                thumb.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index')) || 0;
+                    showSlide(index);
                 });
             });
         });
+
+        // Global slider functions
+        window.currentSlideIndex = 0;
+
+        function showSlide(index) {
+            const slides = document.querySelectorAll('.product-image-slider .slide');
+            const thumbnails = document.querySelectorAll('.thumbnail-nav .thumbnail');
+            
+            if (slides.length === 0) return;
+            
+            // Update current index
+            window.currentSlideIndex = index;
+            
+            // Hide all slides
+            slides.forEach(slide => {
+                slide.classList.remove('active');
+            });
+            
+            // Show selected slide
+            slides[index].classList.add('active');
+            
+            // Update thumbnails
+            thumbnails.forEach((thumb, i) => {
+                thumb.classList.toggle('active', i === index);
+            });
+        }
+
+        function nextSlide() {
+            const slides = document.querySelectorAll('.product-image-slider .slide');
+            const nextIndex = (window.currentSlideIndex + 1) % slides.length;
+            showSlide(nextIndex);
+        }
+
+        function prevSlide() {
+            const slides = document.querySelectorAll('.product-image-slider .slide');
+            const prevIndex = (window.currentSlideIndex - 1 + slides.length) % slides.length;
+            showSlide(prevIndex);
+        }
     </script>
 
     <!-- Lightbox functionality -->
