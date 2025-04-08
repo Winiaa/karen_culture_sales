@@ -10,6 +10,10 @@ use Stripe\Stripe;
 use Stripe\Exception\ApiErrorException;
 use App\Mail\OrderConfirmationMail;
 use Illuminate\Support\Facades\Mail;
+use Stripe\Exception\CardException;
+use Stripe\Exception\InvalidRequestException;
+use Stripe\Exception\AuthenticationException;
+use Stripe\Exception\ApiConnectionException;
 
 class StripePaymentController extends Controller
 {
@@ -337,35 +341,36 @@ class StripePaymentController extends Controller
      */
     private function getPaymentErrorMessage($exception)
     {
-        $errorCode = $exception->getStripeCode();
-        
-        switch ($errorCode) {
-            case 'card_declined':
-                return 'Your card was declined. Please try another card.';
-                
-            case 'expired_card':
-                return 'Your card has expired. Please try another card.';
-                
-            case 'incorrect_cvc':
-                return 'The security code (CVC) is incorrect. Please check and try again.';
-                
-            case 'processing_error':
-                return 'An error occurred while processing your card. Please try again.';
-                
-            case 'incorrect_number':
-                return 'The card number is incorrect. Please check and try again.';
-                
-            case 'insufficient_funds':
-                return 'Your card has insufficient funds. Please try another card.';
-                
-            default:
-                // For development, you might want to show the actual error
-                if (config('app.debug')) {
-                    return 'Payment error: ' . $exception->getMessage();
-                }
-                
-                return 'There was a problem with your payment. Please try again or use a different card.';
+        if ($exception instanceof CardException) {
+            switch ($exception->getStripeCode()) {
+                case 'card_declined':
+                case 'insufficient_funds':
+                case 'expired_card':
+                case 'incorrect_cvc':
+                case 'incorrect_number':
+                case 'incorrect_zip':
+                    return 'Unable to process payment. Please check your card details or try a different payment method.';
+                default:
+                    return 'Unable to process payment. Please try again or use a different payment method.';
+            }
         }
+        
+        if ($exception instanceof InvalidRequestException) {
+            return 'Invalid payment request. Please try again.';
+        }
+        
+        if ($exception instanceof AuthenticationException) {
+            Log::error('Stripe authentication error: ' . $exception->getMessage());
+            return 'Unable to process payment at this time. Please try again later.';
+        }
+        
+        if ($exception instanceof ApiConnectionException) {
+            Log::error('Stripe API connection error: ' . $exception->getMessage());
+            return 'Unable to connect to payment service. Please try again later.';
+        }
+        
+        Log::error('Stripe payment error: ' . $exception->getMessage());
+        return 'An error occurred while processing your payment. Please try again.';
     }
 
     /**
@@ -471,6 +476,97 @@ class StripePaymentController extends Controller
             
             return redirect()->route('orders.index')
                 ->with('error', 'An error occurred while processing your payment. Please contact support.');
+        }
+    }
+
+    /**
+     * Process a refund for a Stripe payment.
+     *
+     * @param \App\Models\Order $order
+     * @return bool
+     */
+    public function processRefund(Order $order)
+    {
+        Log::info('Starting refund process for order', [
+            'order_id' => $order->id,
+            'payment_method' => $order->payment ? $order->payment->payment_method : 'none',
+            'payment_status' => $order->payment ? $order->payment->payment_status : 'none',
+            'transaction_id' => $order->payment ? $order->payment->transaction_id : 'none',
+            'paid_at' => $order->paid_at ? $order->paid_at->format('Y-m-d H:i:s') : 'none',
+            'minutes_since_payment' => $order->paid_at ? $order->paid_at->diffInMinutes(now()) : 'N/A'
+        ]);
+
+        // Ensure the order has a Stripe payment
+        if (!$order->payment || $order->payment->payment_method !== 'stripe') {
+            Log::error('Cannot process refund: Order does not have a Stripe payment', [
+                'order_id' => $order->id
+            ]);
+            return false;
+        }
+
+        // Ensure the payment is completed
+        if ($order->payment->payment_status !== 'completed') {
+            Log::error('Cannot process refund: Payment is not completed', [
+                'order_id' => $order->id,
+                'payment_status' => $order->payment->payment_status
+            ]);
+            return false;
+        }
+
+        // Ensure the payment has a transaction ID
+        if (empty($order->payment->transaction_id)) {
+            Log::error('Cannot process refund: No transaction ID found', [
+                'order_id' => $order->id
+            ]);
+            return false;
+        }
+
+        try {
+            // Set Stripe API key
+            $stripeKey = config('services.stripe.secret');
+            Log::info('Using Stripe key', [
+                'key_length' => strlen($stripeKey),
+                'key_prefix' => substr($stripeKey, 0, 7) . '...'
+            ]);
+            
+            Stripe::setApiKey($stripeKey);
+
+            // Create refund
+            Log::info('Creating Stripe refund', [
+                'payment_intent' => $order->payment->transaction_id
+            ]);
+            
+            $refund = \Stripe\Refund::create([
+                'payment_intent' => $order->payment->transaction_id,
+                'reason' => 'requested_by_customer',
+            ]);
+
+            // Log successful refund
+            Log::info('Stripe refund processed successfully', [
+                'order_id' => $order->id,
+                'refund_id' => $refund->id,
+                'refund_status' => $refund->status,
+                'refund_amount' => $refund->amount
+            ]);
+
+            return true;
+        } catch (ApiErrorException $e) {
+            Log::error('Stripe refund failed: ' . $e->getMessage(), [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+                'error_type' => get_class($e),
+                'error_code' => $e->getStripeCode(),
+                'error_param' => $e->getStripeParam(),
+                'error_decline_code' => $e->getDeclineCode()
+            ]);
+            return false;
+        } catch (\Exception $e) {
+            Log::error('Unexpected error during refund: ' . $e->getMessage(), [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+                'error_type' => get_class($e)
+            ]);
+            return false;
         }
     }
 } 

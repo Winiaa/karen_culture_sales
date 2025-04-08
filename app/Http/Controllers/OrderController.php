@@ -226,6 +226,14 @@ class OrderController extends Controller
         try {
             DB::beginTransaction();
 
+            // Log cancellation attempt
+            \Log::info('Attempting to cancel order', [
+                'order_id' => $order->id,
+                'payment_method' => $order->payment ? $order->payment->payment_method : 'none',
+                'payment_status' => $order->payment ? $order->payment->payment_status : 'none',
+                'is_within_cancellation_window' => $order->isWithinStripeCancellationWindow()
+            ]);
+
             // Update order status
             $order->update([
                 'order_status' => 'cancelled'
@@ -236,20 +244,66 @@ class OrderController extends Controller
                 $item->product->increment('quantity', $item->quantity);
             }
 
-            // Update payment status if necessary
-            if ($order->payment) {
-                $order->payment->update([
-                    'payment_status' => 'failed'
+            // Process refund for Stripe payments if within cancellation window
+            if ($order->payment && $order->payment->payment_method === 'stripe' && 
+                $order->payment->payment_status === 'completed' && 
+                $order->isWithinStripeCancellationWindow()) {
+                
+                \Log::info('Processing refund for Stripe payment', [
+                    'order_id' => $order->id,
+                    'transaction_id' => $order->payment->transaction_id
                 ]);
+                
+                // Get the StripePaymentController instance
+                $stripeController = app(StripePaymentController::class);
+                
+                // Process the refund
+                $refundSuccess = $stripeController->processRefund($order);
+                
+                // Update payment status based on refund result
+                if ($refundSuccess) {
+                    $order->payment->update([
+                        'payment_status' => 'refunded'
+                    ]);
+                    \Log::info('Payment status updated to refunded', [
+                        'order_id' => $order->id
+                    ]);
+                } else {
+                    // If refund fails, still mark as failed but log the issue
+                    $order->payment->update([
+                        'payment_status' => 'failed'
+                    ]);
+                    \Log::error('Failed to process refund for order: ' . $order->id);
+                }
+            } else {
+                // For non-Stripe payments or outside cancellation window, just mark as failed
+                if ($order->payment) {
+                    $order->payment->update([
+                        'payment_status' => 'failed'
+                    ]);
+                    \Log::info('Payment status updated to failed (non-Stripe or outside window)', [
+                        'order_id' => $order->id,
+                        'payment_method' => $order->payment->payment_method,
+                        'is_within_window' => $order->isWithinStripeCancellationWindow()
+                    ]);
+                }
             }
 
             DB::commit();
+            \Log::info('Order cancelled successfully', [
+                'order_id' => $order->id
+            ]);
 
             return back()->with('success', 'Order cancelled successfully.');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Failed to cancel order: ' . $e->getMessage());
+            \Log::error('Failed to cancel order: ' . $e->getMessage(), [
+                'order_id' => $order->id,
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
             return back()->with('error', 'Unable to cancel order. Please try again.');
         }
     }

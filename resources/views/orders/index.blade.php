@@ -59,11 +59,19 @@
                         <div>{{ $order->payment ? ($order->payment->payment_method === 'stripe' ? 'Credit Card' : 'Cash on Delivery') : 'N/A' }}</div>
                         <p class="mb-2">
                             <strong>Payment Status:</strong>
-                            <span class="badge bg-{{ $order->payment_status === 'completed' ? 'success' : ($order->payment_status === 'failed' ? 'danger' : 'warning') }}">
-                                {{ ucfirst($order->payment_status) }}
+                            <span class="badge bg-{{ $order->order_status === 'cancelled' ? ($order->payment && $order->payment->payment_method === 'stripe' ? 'info' : 'danger') : ($order->payment_status === 'completed' ? 'success' : ($order->payment_status === 'failed' || $order->payment_status === 'declined' || $order->payment_status === 'error' ? 'danger' : 'warning')) }}">
+                                @if($order->order_status === 'cancelled')
+                                    @if($order->payment && $order->payment->payment_method === 'stripe')
+                                        Refunded
+                                    @else
+                                        Cancelled
+                                    @endif
+                                @else
+                                    {{ ucfirst($order->payment_status) }}
+                                @endif
                             </span>
                         </p>
-                        @if($order->delivery && $order->delivery->tracking_number)
+                        @if($order->delivery && $order->delivery->tracking_number && $order->order_status !== 'cancelled')
                         <p class="mb-2">
                             <strong>Tracking Number:</strong>
                             <span class="d-block">{{ $order->delivery->tracking_number }}</span>
@@ -73,6 +81,11 @@
                             <span class="badge bg-{{ $order->delivery->delivery_status === 'delivered' ? 'success' : ($order->delivery->delivery_status === 'out_for_delivery' ? 'info' : 'warning') }}">
                                 {{ $order->delivery->delivery_status === 'delivered' ? 'Delivered' : ($order->delivery->delivery_status === 'out_for_delivery' ? 'In Transit' : 'Processing') }}
                             </span>
+                        </p>
+                        @elseif($order->order_status === 'cancelled')
+                        <p class="mb-2">
+                            <strong>Shipping Status:</strong>
+                            <span class="badge bg-danger">Cancelled</span>
                         </p>
                         @endif
                     </div>

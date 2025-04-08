@@ -35,10 +35,30 @@ class Payment extends Model
     }
 
     /**
-     * Check if the payment has failed.
+     * Check if the payment is pending.
      */
-    public function hasFailed()
+    public function isPending()
     {
-        return $this->payment_status === 'failed';
+        return $this->payment_status === 'pending';
+    }
+
+    /**
+     * Get the status badge class for the payment.
+     */
+    public function getStatusBadgeClass()
+    {
+        return match($this->payment_status) {
+            'completed' => 'bg-success',
+            'pending' => 'bg-warning',
+            default => 'bg-secondary',
+        };
+    }
+
+    /**
+     * Check if the payment is refunded.
+     */
+    public function isRefunded()
+    {
+        return $this->payment_status === 'refunded';
     }
 }

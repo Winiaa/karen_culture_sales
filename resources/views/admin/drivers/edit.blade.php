@@ -101,38 +101,9 @@
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save"></i> Update Driver
                     </button>
-                    
-                    @if($driver->activeDeliveries()->count() == 0)
-                        <form action="{{ route('admin.drivers.destroy', $driver) }}" method="POST" class="delete-form">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-danger">
-                                <i class="fas fa-trash"></i> Delete Driver
-                            </button>
-                        </form>
-                    @else
-                        <button type="button" class="btn btn-danger" disabled title="Cannot delete driver with active deliveries">
-                            <i class="fas fa-trash"></i> Delete Driver
-                        </button>
-                    @endif
                 </div>
             </form>
         </div>
     </div>
 </div>
-@endsection
-
-@push('scripts')
-<script>
-    $(document).ready(function() {
-        // Handle delete confirmation
-        $('.delete-form').on('submit', function(e) {
-            e.preventDefault();
-            
-            if (confirm('Are you sure you want to delete this driver? This action cannot be undone.')) {
-                this.submit();
-            }
-        });
-    });
-</script>
-@endpush 
+@endsection 

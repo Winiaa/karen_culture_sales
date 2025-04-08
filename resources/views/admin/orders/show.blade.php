@@ -52,12 +52,56 @@
     background: #dc3545;
 }
 
+.timeline-item.info i {
+    background: #0dcaf0;
+}
+
+/* Add status line colors */
+.timeline-item.completed:after {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 30px;
+    height: calc(100% - 30px);
+    width: 2px;
+    background: #28a745;
+}
+
+.timeline-item.failed:after {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 30px;
+    height: calc(100% - 30px);
+    width: 2px;
+    background: #dc3545;
+}
+
+.timeline-item.info:after {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 30px;
+    height: calc(100% - 30px);
+    width: 2px;
+    background: #0dcaf0;
+}
+
 .timeline-content {
     padding: 0;
 }
 
 .timeline-content h6 {
     margin-bottom: 0.25rem;
+}
+
+/* Add styles for cancelled status */
+.timeline-item.failed .timeline-content h6 {
+    color: #dc3545;
+}
+
+.timeline-item.failed .timeline-content p.text-muted {
+    color: #dc3545 !important;
 }
 
 .driver-list-item {
@@ -102,19 +146,31 @@
                                 <p class="text-muted">{{ $order->created_at->format('M d, Y h:i A') }}</p>
                             </div>
                         </div>
-                        <div class="timeline-item {{ $order->payment_status === 'completed' ? 'completed' : ($order->payment_status === 'failed' ? 'failed' : '') }}">
-                            <i class="fas fa-credit-card"></i>
+                        <div class="timeline-item {{ $order->order_status === 'cancelled' ? ($order->payment && $order->payment->payment_method === 'stripe' ? 'info' : 'failed') : ($order->payment_status === 'completed' ? 'completed' : '') }}">
+                            @if($order->order_status === 'cancelled')
+                                @if($order->payment && $order->payment->payment_method === 'stripe')
+                                    <i class="fas fa-undo"></i>
+                                @else
+                                    <i class="fas fa-times-circle"></i>
+                                @endif
+                            @else
+                                <i class="fas fa-credit-card"></i>
+                            @endif
                             <div class="timeline-content">
-                                <h6>Payment {{ ucfirst($order->payment_status) }}</h6>
+                                <h6>
+                                    Payment {{ $order->order_status === 'cancelled' ? ($order->payment && $order->payment->payment_method === 'stripe' ? 'Refunded' : 'Cancelled') : ucfirst($order->payment_status) }}
+                                </h6>
                                 <p class="text-muted">{{ $order->payment->updated_at->format('M d, Y h:i A') }}</p>
                             </div>
                         </div>
-                        <div class="timeline-item {{ $order->order_status === 'shipped' || $order->order_status === 'delivered' ? 'completed' : '' }}">
+                        <div class="timeline-item {{ $order->order_status === 'cancelled' ? 'failed' : ($order->order_status === 'shipped' || $order->order_status === 'delivered' ? 'completed' : '') }}">
                             <i class="fas fa-truck"></i>
                             <div class="timeline-content">
                                 <h6>Order Shipped</h6>
                                 <p class="text-muted">
-                                    @if($order->order_status === 'shipped' || $order->order_status === 'delivered')
+                                    @if($order->order_status === 'cancelled')
+                                        Cancelled
+                                    @elseif($order->order_status === 'shipped' || $order->order_status === 'delivered')
                                         @if($order->delivery)
                                             {{ $order->delivery->updated_at->format('M d, Y h:i A') }}
                                         @else
@@ -126,12 +182,14 @@
                                 </p>
                             </div>
                         </div>
-                        <div class="timeline-item {{ $order->order_status === 'delivered' ? 'completed' : '' }}">
+                        <div class="timeline-item {{ $order->order_status === 'cancelled' ? 'failed' : ($order->order_status === 'delivered' ? 'completed' : '') }}">
                             <i class="fas fa-box"></i>
                             <div class="timeline-content">
                                 <h6>Order Delivered</h6>
                                 <p class="text-muted">
-                                    @if($order->order_status === 'delivered')
+                                    @if($order->order_status === 'cancelled')
+                                        Cancelled
+                                    @elseif($order->order_status === 'delivered')
                                         @if($order->delivery && $order->delivery->delivered_at)
                                             {{ $order->delivery->delivered_at->format('M d, Y h:i A') }}
                                         @else
@@ -153,7 +211,7 @@
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Order Items</h5>
-                    <span class="badge bg-{{ $order->order_status === 'delivered' ? 'success' : ($order->order_status === 'cancelled' ? 'danger' : 'primary') }}">
+                    <span class="badge bg-{{ $order->order_status === 'delivered' ? 'success' : ($order->order_status === 'cancelled' ? 'danger' : ($order->order_status === 'processing' ? 'warning' : 'primary')) }}">
                         {{ ucfirst($order->order_status) }}
                     </span>
                 </div>
@@ -182,7 +240,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Delivery Information</h5>
                     @if($order->delivery)
-                        <span class="badge bg-{{ $order->delivery->delivery_status === 'delivered' ? 'success' : ($order->delivery->delivery_status === 'failed' ? 'danger' : 'primary') }}">
+                        <span class="badge bg-{{ $order->delivery->delivery_status === 'delivered' ? 'success' : ($order->delivery->delivery_status === 'failed' ? 'danger' : ($order->delivery->delivery_status === 'pending' ? 'warning' : 'primary')) }}">
                             {{ ucfirst(str_replace('_', ' ', $order->delivery->delivery_status)) }}
                         </span>
                     @endif
@@ -375,10 +433,10 @@
                             <div class="row mb-3">
                                 <label class="col-md-3 form-label">Payment Status</label>
                                 <div class="col-md-9">
-                                    <select class="form-select" name="payment_status">
-                                        <option value="pending" {{ $order->payment->payment_status === 'pending' ? 'selected' : '' }}>Pending</option>
-                                        <option value="completed" {{ $order->payment->payment_status === 'completed' ? 'selected' : '' }}>Completed</option>
-                                        <option value="failed" {{ $order->payment->payment_status === 'failed' ? 'selected' : '' }}>Failed</option>
+                                    <select class="form-select" id="payment_status{{ $order->id }}" name="payment_status" required>
+                                        <option value="pending" {{ $order->payment_status === 'pending' ? 'selected' : '' }}>Pending</option>
+                                        <option value="completed" {{ $order->payment_status === 'completed' ? 'selected' : '' }}>Completed</option>
+                                        <option value="refunded" {{ $order->payment_status === 'refunded' ? 'selected' : '' }}>Refunded</option>
                                     </select>
                                     @if($order->payment->payment_method === 'cash_on_delivery')
                                         <small class="text-muted d-block mt-2">
@@ -415,7 +473,7 @@
                     <h5 class="mb-0">Actions</h5>
                 </div>
                 <div class="card-body">
-                    <button type="button" class="btn btn-karen w-100 mb-2" data-bs-toggle="modal" data-bs-target="#updateStatus" id="openStatusModal">
+                    <button type="button" class="btn btn-karen w-100 mb-2" data-bs-toggle="modal" data-bs-target="#updateStatusModal{{ $order->id }}" id="openStatusModal">
                         Update Order Status
                     </button>
                     
@@ -462,21 +520,21 @@
     </div>
 </div>
 
-<!-- Update Status Modal -->
-<div class="modal fade" id="updateStatus" tabindex="-1" aria-labelledby="updateStatusLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+<!-- Status Update Modal -->
+<div class="modal fade" id="updateStatusModal{{ $order->id }}" tabindex="-1" aria-labelledby="updateStatusModalLabel{{ $order->id }}" aria-hidden="true">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="updateStatusLabel">Update Order Status</h5>
+                <h5 class="modal-title" id="updateStatusModalLabel{{ $order->id }}">Update Order #{{ $order->id }} Status</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('admin.orders.status', $order) }}" method="POST" id="updateStatusForm">
-                @csrf
+            <form action="{{ route('admin.orders.status', $order) }}" method="POST">
                 @method('PUT')
+                @csrf
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="order_status" class="form-label">Order Status</label>
-                        <select class="form-select" id="order_status" name="order_status" required>
+                        <label for="order_status{{ $order->id }}" class="form-label">Order Status</label>
+                        <select class="form-select" id="order_status{{ $order->id }}" name="order_status" required>
                             <option value="processing" {{ $order->order_status === 'processing' ? 'selected' : '' }}>Processing</option>
                             <option value="shipped" {{ $order->order_status === 'shipped' ? 'selected' : '' }}>Shipped</option>
                             <option value="delivered" {{ $order->order_status === 'delivered' ? 'selected' : '' }}>Delivered</option>
@@ -484,21 +542,21 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label for="payment_status" class="form-label">Payment Status</label>
-                        <select class="form-select" id="payment_status" name="payment_status" required>
+                        <label for="payment_status{{ $order->id }}" class="form-label">Payment Status</label>
+                        <select class="form-select" id="payment_status{{ $order->id }}" name="payment_status" required>
                             <option value="pending" {{ $order->payment_status === 'pending' ? 'selected' : '' }}>Pending</option>
                             <option value="completed" {{ $order->payment_status === 'completed' ? 'selected' : '' }}>Completed</option>
-                            <option value="failed" {{ $order->payment_status === 'failed' ? 'selected' : '' }}>Failed</option>
+                            <option value="refunded" {{ $order->payment_status === 'refunded' ? 'selected' : '' }}>Refunded</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label for="status_notes" class="form-label">Notes</label>
-                        <textarea class="form-control" id="status_notes" name="status_notes" rows="3"></textarea>
+                        <label for="notes{{ $order->id }}" class="form-label">Notes (Optional)</label>
+                        <textarea class="form-control" id="notes{{ $order->id }}" name="notes" rows="3"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-karen">Update Status</button>
+                    <button type="submit" class="btn btn-primary">Update Status</button>
                 </div>
             </form>
         </div>
@@ -585,7 +643,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Only fix the status update modal
         const statusBtn = document.getElementById('openStatusModal');
-        const statusModal = document.getElementById('updateStatus');
+        const statusModal = document.getElementById('updateStatusModal{{ $order->id }}');
         
         if (statusBtn && statusModal) {
             // Clean up function for modal artifacts
@@ -889,9 +947,9 @@
         }
 
         // Order status update handling
-        const updateStatusForm = document.getElementById('updateStatusForm');
-        const statusSelect = document.getElementById('order_status');
-        const paymentStatusSelect = document.getElementById('payment_status');
+        const updateStatusForm = document.getElementById('updateStatusModal{{ $order->id }} form');
+        const statusSelect = document.getElementById('order_status{{ $order->id }}');
+        const paymentStatusSelect = document.getElementById('payment_status{{ $order->id }}');
         
         if (updateStatusForm && statusSelect && paymentStatusSelect) {
             // Show confirmation alert for certain status changes

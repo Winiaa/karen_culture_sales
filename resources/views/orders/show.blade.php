@@ -39,43 +39,7 @@
                     <h5 class="mb-0">Order Status</h5>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex justify-content-between mb-4">
-                        <div class="text-center">
-                            <div class="status-circle {{ $order->order_status != 'cancelled' ? 'bg-success' : 'bg-danger' }}">
-                                <i class="fas fa-check"></i>
-                            </div>
-                            <p class="mt-2 mb-0">Order Placed</p>
-                            <small class="text-muted">{{ $order->created_at->format('M d, Y') }}</small>
-                        </div>
-                        <div class="status-line"></div>
-                        <div class="text-center">
-                            <div class="status-circle {{ $order->payment_status === 'completed' ? 'bg-success' : 'bg-secondary' }}">
-                                <i class="fas fa-dollar-sign"></i>
-                            </div>
-                            <p class="mt-2 mb-0">Payment</p>
-                            <small class="text-muted">{{ ucfirst($order->payment_status) }}</small>
-                        </div>
-                        <div class="status-line"></div>
-                        <div class="text-center">
-                            <div class="status-circle {{ $order->order_status === 'shipped' || $order->order_status === 'delivered' ? 'bg-success' : 'bg-secondary' }}">
-                                <i class="fas fa-shipping-fast"></i>
-                            </div>
-                            <p class="mt-2 mb-0">Shipped</p>
-                            @if($order->delivery && ($order->order_status === 'shipped' || $order->order_status === 'delivered'))
-                            <small class="text-muted">{{ $order->delivery->updated_at->format('M d, Y') }}</small>
-                            @endif
-                        </div>
-                        <div class="status-line"></div>
-                        <div class="text-center">
-                            <div class="status-circle {{ $order->order_status === 'delivered' ? 'bg-success' : 'bg-secondary' }}">
-                                <i class="fas fa-home"></i>
-                            </div>
-                            <p class="mt-2 mb-0">Delivered</p>
-                            @if($order->delivery && $order->delivery->delivery_status === 'delivered')
-                            <small class="text-muted">{{ $order->delivery->delivered_at ? $order->delivery->delivered_at->format('M d, Y') : $order->delivery->updated_at->format('M d, Y') }}</small>
-                            @endif
-                        </div>
-                    </div>
+                    <x-customer.order-timeline :order="$order" />
                 </div>
             </div>
 
@@ -137,7 +101,6 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <h5 class="fs-6">Payment Information</h5>
                         <div class="row g-2">
                             <div class="col-md-6">
                                 <div class="bg-light p-3 rounded">
@@ -159,7 +122,13 @@
                                     <div class="small text-muted">Payment Status</div>
                                     <div>
                                         @if($order->payment)
-                                            @if($order->payment->payment_status === 'completed')
+                                            @if($order->order_status === 'cancelled')
+                                                @if($order->payment->payment_method === 'stripe')
+                                                    <span class="text-info"><i class="fas fa-undo me-1"></i> Refunded</span>
+                                                @else
+                                                    <span class="text-danger"><i class="fas fa-times-circle me-1"></i> Cancelled</span>
+                                                @endif
+                                            @elseif($order->payment->payment_status === 'completed')
                                                 <span class="text-success"><i class="fas fa-check-circle me-1"></i> Paid</span>
                                             @elseif($order->payment->payment_status === 'pending')
                                                 @if($order->payment->payment_method === 'cash_on_delivery')
@@ -183,16 +152,16 @@
                         </div>
                     </div>
                     @if($order->payment && $order->payment->transaction_id)
-                    <p class="mb-0">
-                        <strong>Transaction ID:</strong><br>
-                        {{ $order->payment->transaction_id }}
-                    </p>
+                    <div class="bg-light p-3 rounded">
+                        <div class="small text-muted">Transaction ID</div>
+                        <div class="font-monospace">{{ $order->payment->transaction_id }}</div>
+                    </div>
                     @endif
                 </div>
             </div>
 
             <!-- Delivery Information -->
-            @if($order->delivery)
+            @if($order->delivery && $order->order_status !== 'cancelled')
             <div class="card mb-4">
                 <div class="card-header d-flex align-items-center justify-content-between">
                     <h5 class="mb-0">Delivery Information</h5>
@@ -303,7 +272,17 @@
                     @endif
                 </div>
             </div>
-            @elseif($order->order_status !== 'cancelled')
+            @elseif($order->order_status === 'cancelled')
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Delivery Information</h5>
+                    <span class="badge bg-danger">Cancelled</span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-0">This order has been cancelled. No delivery information is available.</p>
+                </div>
+            </div>
+            @else
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0">Delivery Information</h5>
@@ -368,8 +347,8 @@
 
 <style>
 .status-circle {
-    width: 40px;
-    height: 40px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -379,10 +358,49 @@
 }
 
 .status-line {
-    flex-grow: 1;
+    flex: 1;
     height: 2px;
-    background-color: #dee2e6;
-    margin: 20px 10px;
+    background: #e9ecef;
+    margin: 25px 10px 0;
+    position: relative;
+}
+
+/* Status line colors based on order status */
+.text-center:nth-child(1) .status-circle.bg-success ~ .status-line {
+    background: #28a745;
+}
+
+.text-center:nth-child(1) .status-circle.bg-danger ~ .status-line {
+    background: #dc3545;
+}
+
+.text-center:nth-child(3) .status-circle.bg-success ~ .status-line {
+    background: #28a745;
+}
+
+.text-center:nth-child(3) .status-circle.bg-danger ~ .status-line {
+    background: #dc3545;
+}
+
+.text-center:nth-child(3) .status-circle.bg-info ~ .status-line {
+    background: #0dcaf0;
+}
+
+.text-center:nth-child(3) .status-circle.bg-secondary ~ .status-line {
+    background: #e9ecef;
+}
+
+.text-center:nth-child(5) .status-circle.bg-success ~ .status-line {
+    background: #28a745;
+}
+
+.text-center:nth-child(5) .status-circle.bg-secondary ~ .status-line {
+    background: #e9ecef;
+}
+
+/* Fix for the last status line */
+.text-center:last-child .status-line {
+    display: none;
 }
 
 .bg-secondary {

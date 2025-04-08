@@ -18,7 +18,16 @@ class OrderController extends Controller
         $totalOrders = Order::count();
         $pendingOrders = Order::where('order_status', 'processing')->count();
         $completedOrders = Order::where('order_status', 'delivered')->count();
-        $totalRevenue = Order::where('payment_status', 'completed')->sum('total_amount');
+        
+        // Calculate revenue excluding cancelled orders
+        $completedOrdersCount = Order::where('payment_status', 'completed')
+                                    ->where('order_status', '!=', 'cancelled')
+                                    ->count();
+        $totalRevenue = Order::where('payment_status', 'completed')
+                            ->where('order_status', '!=', 'cancelled')
+                            ->sum('total_amount');
+        $averageOrderValue = $completedOrdersCount > 0 ? $totalRevenue / $completedOrdersCount : 0;
+        
         $totalProducts = \App\Models\Product::count();
         $totalCategories = \App\Models\Category::count();
         $totalUsers = \App\Models\User::count();
@@ -30,13 +39,15 @@ class OrderController extends Controller
                     $q->where(function($q) {
                         // Show all cash on delivery orders
                         $q->where('payment_method', 'cash_on_delivery');
-                        // For credit card orders, only show completed payments
+                        // For credit card orders, show completed payments
                         $q->orWhere(function($q) {
                             $q->where('payment_method', 'stripe')
                               ->where('payment_status', 'completed');
                         });
                     });
                 });
+                // Include cancelled orders
+                $q->orWhere('order_status', 'cancelled');
             })
             ->orderBy('created_at', 'desc')
             ->take(10)
@@ -44,30 +55,29 @@ class OrderController extends Controller
 
         // Monthly revenue
         $monthlyRevenue = Order::where('payment_status', 'completed')
+            ->where('order_status', '!=', 'cancelled')
             ->whereYear('created_at', now()->year)
             ->whereMonth('created_at', now()->month)
             ->sum('total_amount');
             
         // Today's revenue
         $todayRevenue = Order::where('payment_status', 'completed')
+            ->where('order_status', '!=', 'cancelled')
             ->whereDate('created_at', now()->toDateString())
             ->sum('total_amount');
             
         // Yearly revenue
         $yearlyRevenue = Order::where('payment_status', 'completed')
+            ->where('order_status', '!=', 'cancelled')
             ->whereYear('created_at', now()->year)
             ->sum('total_amount');
             
-        // Average order value
-        $averageOrderValue = $totalOrders > 0 
-            ? $totalRevenue / $totalOrders 
-            : 0;
-
         // Generate sales data for the last 7 days
         $salesData = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i);
             $daySales = Order::where('payment_status', 'completed')
+                ->where('order_status', '!=', 'cancelled')
                 ->whereDate('created_at', $date->toDateString())
                 ->sum('total_amount');
             
@@ -112,10 +122,15 @@ class OrderController extends Controller
                     $q->where(function($q) {
                         // Show all cash on delivery orders
                         $q->where('payment_method', 'cash_on_delivery');
-                        // For credit card orders, only show completed payments
+                        // For credit card orders, show completed payments and cancelled orders
                         $q->orWhere(function($q) {
                             $q->where('payment_method', 'stripe')
-                              ->where('payment_status', 'completed');
+                              ->where(function($q) {
+                                  $q->where('payment_status', 'completed')
+                                    ->orWhereHas('order', function($q) {
+                                        $q->where('order_status', 'cancelled');
+                                    });
+                              });
                         });
                     });
                 });
@@ -181,7 +196,7 @@ class OrderController extends Controller
     {
         $request->validate([
             'order_status' => 'required|in:processing,shipped,delivered,cancelled',
-            'payment_status' => 'required|in:pending,completed,failed',
+            'payment_status' => 'required|in:pending,completed,failed,refunded',
             'notes' => 'nullable|string|max:500'
         ]);
 
@@ -630,11 +645,19 @@ class OrderController extends Controller
             }
         }
         
-        // Filter by payment status - default to completed if not specified
-        if ($request->filled('payment_status') && in_array($request->payment_status, ['pending', 'completed', 'failed'])) {
-            $query->where('payment_status', $request->payment_status);
-        } else {
-            $query->where('payment_status', 'completed');
+        // Filter by payment status if specified
+        if ($request->filled('payment_status')) {
+            if ($request->payment_status === 'refunded') {
+                $query->where('order_status', 'cancelled');
+            } else {
+                // For completed payments, exclude cancelled orders
+                if ($request->payment_status === 'completed') {
+                    $query->where('payment_status', 'completed')
+                          ->where('order_status', '!=', 'cancelled');
+                } else {
+                    $query->where('payment_status', $request->payment_status);
+                }
+            }
         }
         
         // Filter by order status
@@ -652,15 +675,21 @@ class OrderController extends Controller
         // Get orders and execute query
         $orders = $query->orderBy('created_at', 'desc')->paginate(15);
         
-        // Calculate summary statistics
-        $totalRevenue = $orders->where('payment_status', 'completed')->sum('total_amount');
+        // Calculate summary statistics - exclude cancelled orders from revenue
+        $completedOrders = $orders->where('payment_status', 'completed')
+                                ->where('order_status', '!=', 'cancelled');
+        $totalRevenue = $completedOrders->sum('total_amount');
+        $completedOrdersCount = $completedOrders->count();
         $totalOrders = $orders->total();
-        $averageOrderValue = $totalOrders > 0 ? $totalRevenue / $totalOrders : 0;
+        $averageOrderValue = $completedOrdersCount > 0 ? $totalRevenue / $completedOrdersCount : 0;
         
         // Get order items for product-level reporting
         $orderItems = collect();
         foreach ($orders as $order) {
-            $orderItems = $orderItems->concat($order->orderItems);
+            // Only include items from completed, non-cancelled orders
+            if ($order->payment_status === 'completed' && $order->order_status !== 'cancelled') {
+                $orderItems = $orderItems->concat($order->orderItems);
+            }
         }
         
         // Get top selling products
@@ -801,6 +830,9 @@ class OrderController extends Controller
             // Format date in Excel-friendly format (MM/DD/YYYY HH:MM:SS)
             $orderDate = $order->created_at ? $order->created_at->format('m/d/Y H:i:s') : 'N/A';
             
+            // Determine payment status - show Refunded for cancelled orders
+            $paymentStatus = $order->order_status === 'cancelled' ? 'Refunded' : $order->payment_status;
+            
             fputcsv($handle, [
                 $order->id,
                 $orderDate,
@@ -809,7 +841,7 @@ class OrderController extends Controller
                 $order->orderItems->sum('quantity'),
                 $order->total_amount,
                 $order->order_status,
-                $order->payment_status,
+                $paymentStatus,
                 $order->payment ? $order->payment->payment_method : 'N/A'
             ]);
         }

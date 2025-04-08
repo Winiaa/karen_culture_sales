@@ -101,11 +101,24 @@ class Order extends Model
      */
     public function isWithinStripeCancellationWindow()
     {
-        if (!$this->paid_at || $this->payment->payment_method !== 'stripe') {
+        // Check if the order has a payment and it's a Stripe payment
+        if (!$this->payment || $this->payment->payment_method !== 'stripe') {
             return false;
         }
         
-        return $this->paid_at->diffInMinutes(now()) < 20;
+        // Check if the payment is completed
+        if ($this->payment->payment_status !== 'completed') {
+            return false;
+        }
+        
+        // Check if paid_at is set
+        if (!$this->paid_at) {
+            return false;
+        }
+        
+        // Check if within 20 minutes
+        $minutesPassed = $this->paid_at->diffInMinutes(now());
+        return $minutesPassed < 20;
     }
 
     /**

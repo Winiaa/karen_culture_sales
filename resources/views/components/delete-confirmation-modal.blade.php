@@ -11,7 +11,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteForm" method="POST" class="d-inline">
+                <form id="deleteForm" method="POST" style="display: inline;">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="btn btn-danger">Delete</button>
@@ -21,35 +21,58 @@
     </div>
 </div>
 
-@push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Only select buttons with the delete-btn class
     const deleteButtons = document.querySelectorAll('.delete-btn');
-    const modal = new bootstrap.Modal(document.getElementById('deleteConfirmationModal'));
+    const modal = document.getElementById('deleteConfirmationModal');
     const deleteForm = document.getElementById('deleteForm');
     const deleteMessage = document.getElementById('deleteConfirmationMessage');
 
     deleteButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const deleteUrl = this.getAttribute('data-delete-url');
-            deleteForm.action = deleteUrl;
-
-            // Determine the type of item being deleted based on the URL
-            if (deleteUrl.includes('/categories/')) {
-                deleteMessage.textContent = 'Are you sure you want to delete this category? This action cannot be undone.';
-            } else if (deleteUrl.includes('/products/')) {
-                deleteMessage.textContent = 'Are you sure you want to delete this product? This action cannot be undone.';
-            } else if (deleteUrl.includes('/drivers/')) {
-                deleteMessage.textContent = 'Are you sure you want to delete this driver? This action cannot be undone.';
-            } else if (deleteUrl.includes('/users/')) {
-                deleteMessage.textContent = 'Are you sure you want to delete this user? This action cannot be undone.';
-            } else {
-                deleteMessage.textContent = 'Are you sure you want to delete this item? This action cannot be undone.';
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Only proceed if this is a delete button
+            if (!this.classList.contains('delete-btn')) {
+                return;
             }
 
-            modal.show();
+            const deleteUrl = this.getAttribute('data-delete-url');
+            if (!deleteUrl) {
+                return;
+            }
+
+            // Set the form action
+            deleteForm.action = deleteUrl;
+
+            // Update the confirmation message based on the type
+            const type = this.getAttribute('data-type') || 'item';
+            let message = 'Are you sure you want to delete this ';
+            
+            switch(type) {
+                case 'categories':
+                    message += 'category?';
+                    break;
+                case 'products':
+                    message += 'product?';
+                    break;
+                case 'drivers':
+                    message += 'driver?';
+                    break;
+                case 'users':
+                    message += 'user?';
+                    break;
+                default:
+                    message += 'item?';
+            }
+            
+            deleteMessage.textContent = message;
+
+            // Show the modal
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
         });
     });
 });
-</script>
-@endpush 
+</script> 

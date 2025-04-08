@@ -159,6 +159,7 @@
                                 <th>Order ID</th>
                                 <th>Customer</th>
                                 <th>Total</th>
+                                <th>Status</th>
                                 <th>Date</th>
                                 <th class="text-end">Actions</th>
                             </tr>
@@ -169,6 +170,11 @@
                                 <td>#{{ $order->id }}</td>
                                 <td>{{ $order->user->name ?? 'Unknown User' }}</td>
                                 <td>@baht($order->total_amount)</td>
+                                <td>
+                                    <span class="badge bg-{{ $order->order_status === 'delivered' ? 'success' : ($order->order_status === 'cancelled' ? 'danger' : 'primary') }}">
+                                        {{ ucfirst($order->order_status) }}
+                                    </span>
+                                </td>
                                 <td>{{ $order->created_at->format('M d, Y') }}</td>
                                 <td class="text-end">
                                     <a href="{{ route('admin.orders.show', $order) }}" class="btn btn-sm btn-outline-secondary">

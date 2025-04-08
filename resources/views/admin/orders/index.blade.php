@@ -38,7 +38,7 @@
                         <option value="">All Payment Statuses</option>
                         <option value="pending" {{ request('payment_status') == 'pending' ? 'selected' : '' }}>Pending</option>
                         <option value="completed" {{ request('payment_status') == 'completed' ? 'selected' : '' }}>Completed</option>
-                        <option value="failed" {{ request('payment_status') == 'failed' ? 'selected' : '' }}>Failed</option>
+                        <option value="refunded" {{ request('payment_status') == 'refunded' ? 'selected' : '' }}>Refunded</option>
                     </select>
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
@@ -88,14 +88,10 @@
                                 <div class="fw-bold text-secondary text-uppercase small">
                                     {{ $order->payment->payment_method === 'stripe' ? 'Credit Card' : 'Cash on Delivery' }}
                                 </div>
-                                <span class="badge bg-{{ $order->payment_status === 'completed' ? 'success' : ($order->payment_status === 'pending' ? 'warning' : 'danger') }}">
-                                    {{ ucfirst($order->payment_status) }}
-                                </span>
+                                <x-payment-status-badge :order="$order" />
                             </td>
                             <td>
-                                <span class="badge bg-{{ $order->order_status === 'delivered' ? 'success' : ($order->order_status === 'cancelled' ? 'danger' : 'primary') }}">
-                                    {{ ucfirst($order->order_status) }}
-                                </span>
+                                <x-order-status-badge :order="$order" />
                             </td>
                             <td>
                                 <div>{{ $order->created_at->format('M d, Y') }}</div>
@@ -130,6 +126,51 @@
         </div>
     </div>
 </div>
+
+<!-- Update Status Modals -->
+@foreach($orders as $order)
+<div class="modal fade" id="updateStatusModal{{ $order->id }}" tabindex="-1" aria-labelledby="updateStatusModalLabel{{ $order->id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="updateStatusModalLabel{{ $order->id }}">Update Order #{{ $order->id }} Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('admin.orders.status', $order) }}" method="POST">
+                @method('PUT')
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="order_status{{ $order->id }}" class="form-label">Order Status</label>
+                        <select class="form-select" id="order_status{{ $order->id }}" name="order_status" required>
+                            <option value="processing" {{ $order->order_status === 'processing' ? 'selected' : '' }}>Processing</option>
+                            <option value="shipped" {{ $order->order_status === 'shipped' ? 'selected' : '' }}>Shipped</option>
+                            <option value="delivered" {{ $order->order_status === 'delivered' ? 'selected' : '' }}>Delivered</option>
+                            <option value="cancelled" {{ $order->order_status === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="payment_status{{ $order->id }}" class="form-label">Payment Status</label>
+                        <select class="form-select" id="payment_status{{ $order->id }}" name="payment_status" required>
+                            <option value="pending" {{ $order->payment_status === 'pending' ? 'selected' : '' }}>Pending</option>
+                            <option value="completed" {{ $order->payment_status === 'completed' ? 'selected' : '' }}>Completed</option>
+                            <option value="refunded" {{ $order->payment_status === 'refunded' ? 'selected' : '' }}>Refunded</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes{{ $order->id }}" class="form-label">Notes (Optional)</label>
+                        <textarea class="form-control" id="notes{{ $order->id }}" name="notes" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-karen">Update Status</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endforeach
 
 @section('styles')
 <style>

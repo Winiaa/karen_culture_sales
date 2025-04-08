@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class DriverController extends Controller
 {
@@ -179,23 +181,64 @@ class DriverController extends Controller
     public function update(Request $request, Driver $driver): RedirectResponse
     {
         $request->validate([
-            'phone_number' => 'required|string|max:20',
-            'vehicle_type' => 'nullable|string|max:50',
-            'license_number' => 'nullable|string|max:50',
-            'vehicle_plate' => 'nullable|string|max:20',
-            'is_active' => 'boolean',
+            'phone_number' => 'required|string|max:255',
+            'vehicle_type' => 'required|in:car,motorcycle,bicycle,van,truck',
+            'license_number' => 'required|string|max:255',
+            'vehicle_plate' => 'required|string|max:255',
+            'is_active' => 'boolean'
+        ]);
+
+        // Get all the input data including is_active
+        $data = $request->only([
+            'phone_number', 
+            'vehicle_type', 
+            'license_number', 
+            'vehicle_plate'
         ]);
         
-        $driver->update([
-            'phone_number' => $request->phone_number,
-            'vehicle_type' => $request->vehicle_type,
-            'license_number' => $request->license_number,
-            'vehicle_plate' => $request->vehicle_plate,
-            'is_active' => $request->has('is_active'),
-        ]);
+        // Handle is_active separately to ensure proper boolean conversion
+        $data['is_active'] = $request->has('is_active');
+
+        // Log the changes being made
+        $changes = [];
+        foreach ($data as $key => $value) {
+            if ($driver->$key != $value) {
+                $changes[$key] = [
+                    'from' => $driver->$key,
+                    'to' => $value
+                ];
+            }
+        }
+
+        // Begin transaction to ensure data consistency
+        DB::beginTransaction();
         
-        return redirect()->route('admin.drivers.show', $driver)
-            ->with('success', 'Driver updated successfully.');
+        try {
+            // Update the driver
+            $driver->update($data);
+            
+            // Ensure the user type remains as 'driver'
+            $driver->user()->update(['usertype' => 'driver']);
+            
+            DB::commit();
+            
+            // Log admin activity
+            \Log::info('Admin driver update', [
+                'admin_id' => auth()->id(),
+                'admin_name' => auth()->user()->name,
+                'driver_id' => $driver->id,
+                'changes' => $changes
+            ]);
+
+            return redirect()->route('admin.drivers.index')
+                ->with('success', 'Driver updated successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            \Log::error('Error updating driver: ' . $e->getMessage());
+            
+            return back()->with('error', 'There was a problem updating the driver: ' . $e->getMessage());
+        }
     }
     
     /**

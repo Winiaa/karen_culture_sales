@@ -5,10 +5,7 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="alert alert-info">
-        <i class="fas fa-info-circle me-2"></i>
-        <strong>Note:</strong> By default, this report only shows orders with completed payments. Use the Payment Status filter to view orders with other payment statuses.
-    </div>
+
 
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
@@ -19,7 +16,7 @@
 
     <!-- Report Filters -->
     <div class="card mb-4">
-        <div class="card-header bg-karen text-white">
+        <div class="card-header bg-karen text-dark">
             <h5 class="mb-0"><i class="fas fa-filter me-2"></i> Report Filters</h5>
         </div>
         <div class="card-body">
@@ -55,10 +52,11 @@
                 <div class="col-md-3 mb-3">
                     <label for="payment_status" class="form-label">Payment Status</label>
                     <select class="form-select" id="payment_status" name="payment_status">
-                        <option value="">All Statuses</option>
-                        <option value="pending" {{ request('payment_status') == 'pending' ? 'selected' : '' }}>Pending</option>
+                        <option value="" {{ request('payment_status', '') == '' ? 'selected' : '' }}>All Statuses</option>
                         <option value="completed" {{ request('payment_status') == 'completed' ? 'selected' : '' }}>Completed</option>
+                        <option value="pending" {{ request('payment_status') == 'pending' ? 'selected' : '' }}>Pending</option>
                         <option value="failed" {{ request('payment_status') == 'failed' ? 'selected' : '' }}>Failed</option>
+                        <option value="refunded" {{ request('payment_status') == 'refunded' ? 'selected' : '' }}>Refunded</option>
                     </select>
                 </div>
                 
@@ -109,7 +107,7 @@
 
     <!-- Summary Stats -->
     <div class="row mb-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card bg-primary text-white h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
@@ -124,7 +122,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card bg-success text-white h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
@@ -139,7 +137,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card bg-info text-white h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
@@ -154,11 +152,26 @@
                 </div>
             </div>
         </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase text-white-50">Cancellations & Refunds</h6>
+                            <h2 class="mb-0">{{ $orders->where('order_status', 'cancelled')->count() }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-undo fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Top Selling Products -->
     <div class="card mb-4">
-        <div class="card-header bg-karen text-white">
+        <div class="card-header bg-karen text-dark">
             <h5 class="mb-0"><i class="fas fa-trophy me-2"></i> Top Selling Products</h5>
         </div>
         <div class="card-body">
@@ -199,7 +212,7 @@
 
     <!-- Category Performance -->
     <div class="card mb-4">
-        <div class="card-header bg-karen text-white">
+        <div class="card-header bg-karen text-dark">
             <h5 class="mb-0"><i class="fas fa-tags me-2"></i> Category Performance</h5>
         </div>
         <div class="card-body">
@@ -244,7 +257,7 @@
 
     <!-- Orders List -->
     <div class="card">
-        <div class="card-header bg-karen text-white">
+        <div class="card-header bg-karen text-dark">
             <h5 class="mb-0"><i class="fas fa-list me-2"></i> Orders</h5>
         </div>
         <div class="card-body">
@@ -276,9 +289,21 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <span class="badge bg-{{ $order->payment_status == 'completed' ? 'success' : ($order->payment_status == 'pending' ? 'warning' : 'danger') }}">
-                                        {{ ucfirst($order->payment_status) }}
-                                    </span>
+                                    @if($order->order_status == 'cancelled')
+                                        @if($order->payment && $order->payment->payment_method === 'stripe')
+                                            <span class="badge bg-info">
+                                                Refunded
+                                            </span>
+                                        @else
+                                            <span class="badge bg-danger">
+                                                Cancelled
+                                            </span>
+                                        @endif
+                                    @else
+                                        <span class="badge bg-{{ $order->payment_status == 'completed' ? 'success' : ($order->payment_status == 'pending' ? 'warning' : 'danger') }}">
+                                            {{ ucfirst($order->payment_status) }}
+                                        </span>
+                                    @endif
                                 </td>
                                 <td>
                                     <a href="{{ route('admin.orders.show', $order) }}" class="btn btn-sm btn-outline-primary">
