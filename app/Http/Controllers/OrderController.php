@@ -78,6 +78,22 @@ class OrderController extends Controller
             // Log the order creation attempt
             \Log::info('Creating order for user #' . auth()->id() . ' with ' . $cartItems->count() . ' items');
 
+            // For Stripe payments, check for existing pending orders
+            if ($request->payment_method === 'stripe') {
+                $existingOrder = Order::where('user_id', auth()->id())
+                    ->whereHas('payment', function($q) {
+                        $q->where('payment_method', 'stripe')
+                          ->where('payment_status', 'pending');
+                    })
+                    ->first();
+
+                if ($existingOrder) {
+                    \Log::info('Found existing pending Stripe order #' . $existingOrder->id);
+                    DB::commit();
+                    return redirect()->route('payments.stripe', $existingOrder);
+                }
+            }
+
             // Calculate total (add validation to ensure positive amount)
             $total = $cartItems->sum(function($item) {
                 return $item->quantity * $item->product->final_price;
@@ -109,8 +125,10 @@ class OrderController extends Controller
                     'subtotal' => $item->quantity * $item->product->final_price
                 ]);
 
-                // Update product quantity
-                $item->product->decrement('quantity', $item->quantity);
+                // Only reduce stock for cash on delivery orders
+                if ($request->payment_method === 'cash_on_delivery') {
+                    $item->product->decrement('quantity', $item->quantity);
+                }
             }
             
             \Log::info('Order items created for order #' . $order->id);

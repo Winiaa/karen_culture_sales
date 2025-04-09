@@ -55,7 +55,6 @@
                         <option value="" {{ request('payment_status', '') == '' ? 'selected' : '' }}>All Statuses</option>
                         <option value="completed" {{ request('payment_status') == 'completed' ? 'selected' : '' }}>Completed</option>
                         <option value="pending" {{ request('payment_status') == 'pending' ? 'selected' : '' }}>Pending</option>
-                        <option value="failed" {{ request('payment_status') == 'failed' ? 'selected' : '' }}>Failed</option>
                         <option value="refunded" {{ request('payment_status') == 'refunded' ? 'selected' : '' }}>Refunded</option>
                     </select>
                 </div>

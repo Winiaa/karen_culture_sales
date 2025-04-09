@@ -603,7 +603,25 @@ class OrderController extends Controller
     public function salesReport(Request $request)
     {
         // Initialize query
-        $query = Order::with(['orderItems.product.category', 'user', 'payment']);
+        $query = Order::with(['orderItems.product.category', 'user', 'payment'])
+                     ->where(function($q) {
+                         $q->whereHas('payment', function($q) {
+                             $q->where(function($q) {
+                                 // Show all cash on delivery orders
+                                 $q->where('payment_method', 'cash_on_delivery');
+                                 // For credit card orders, show completed payments and refunded payments
+                                 $q->orWhere(function($q) {
+                                     $q->where('payment_method', 'stripe')
+                                       ->where(function($q) {
+                                           $q->where('payment_status', 'completed')
+                                             ->orWhere('payment_status', 'refunded');
+                                       });
+                                 });
+                             });
+                         })
+                         // Also include orders that are marked as cancelled (which are typically refunded)
+                         ->orWhere('order_status', 'cancelled');
+                     });
         
         // Apply date filters
         if ($request->has('date_range')) {
@@ -645,8 +663,8 @@ class OrderController extends Controller
             }
         }
         
-        // Filter by payment status if specified
-        if ($request->filled('payment_status')) {
+        // Filter by payment status
+        if ($request->filled('payment_status') && in_array($request->payment_status, ['pending', 'completed', 'refunded'])) {
             if ($request->payment_status === 'refunded') {
                 $query->where('order_status', 'cancelled');
             } else {
@@ -787,8 +805,18 @@ class OrderController extends Controller
         }
         
         // Filter by payment status
-        if ($request->filled('payment_status') && in_array($request->payment_status, ['pending', 'completed', 'failed'])) {
-            $query->where('payment_status', $request->payment_status);
+        if ($request->filled('payment_status') && in_array($request->payment_status, ['pending', 'completed', 'refunded'])) {
+            if ($request->payment_status === 'refunded') {
+                $query->where('order_status', 'cancelled');
+            } else {
+                // For completed payments, exclude cancelled orders
+                if ($request->payment_status === 'completed') {
+                    $query->where('payment_status', 'completed')
+                          ->where('order_status', '!=', 'cancelled');
+                } else {
+                    $query->where('payment_status', $request->payment_status);
+                }
+            }
         }
         
         // Filter by order status

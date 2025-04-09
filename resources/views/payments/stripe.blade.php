@@ -377,9 +377,26 @@
         
         const cardCvcElement = elements.create('cardCvc', { 
             style: style,
-            placeholder: 'CVC'
+            placeholder: 'CVC',
+            maxLength: 4,
+            minLength: 3
         });
         cardCvcElement.mount('#card-cvc-element');
+        
+        // Add card type detection
+        cardNumberElement.addEventListener('change', function(event) {
+            const cardType = event.value ? event.value.type : null;
+            const cvcElement = document.querySelector('#card-cvc-element');
+            
+            // Update CVC field based on card type
+            if (cardType === 'amex') {
+                cardCvcElement.update({ maxLength: 4 });
+                document.querySelector('.cvc-helper').textContent = '4 digits on front of card';
+            } else {
+                cardCvcElement.update({ maxLength: 3 });
+                document.querySelector('.cvc-helper').textContent = '3 digits on back of card';
+            }
+        });
         
         // Handle validation errors
         const displayError = document.getElementById('card-errors');
@@ -557,12 +574,23 @@
             <div class="alert alert-info mb-4" role="alert">
                 <strong>Test Mode:</strong> Use these test cards:
                 <ul class="mb-0 mt-1">
-                    <li>Card: 4242 4242 4242 4242 (Success)</li>
+                    <li><strong>Successful Payments:</strong></li>
+                    <li>Visa: 4242 4242 4242 4242</li>
+                    <li>Mastercard: 5555 5555 5555 4444</li>
+                    <li>American Express: 3782 8224 6310 0055</li>
+                    <li>Discover: 6011 1111 1111 1117</li>
+                    <li class="mt-2"><strong>Failed Payments:</strong></li>
+                    <li>Declined: 4000 0000 0000 0002</li>
+                    <li>Insufficient Funds: 4000 0000 0000 9995</li>
+                    <li>Expired Card: 4000 0000 0000 0069</li>
+                    <li>Incorrect CVC: 4000 0000 0000 0127</li>
+                    <li>Processing Error: 4000 0000 0000 0119</li>
+                    <li class="mt-2"><strong>For all cards:</strong></li>
                     <li>Expiry: Any future date (MM/YY)</li>
-                    <li>CVC: Any 3 digits</li>
+                    <li>CVC: 3 digits (4 digits for American Express)</li>
                 </ul>
             </div>
         `);
     });
 </script>
-@endpush 
+@endpush

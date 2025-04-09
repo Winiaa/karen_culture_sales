@@ -14,6 +14,7 @@ use Stripe\Exception\CardException;
 use Stripe\Exception\InvalidRequestException;
 use Stripe\Exception\AuthenticationException;
 use Stripe\Exception\ApiConnectionException;
+use Illuminate\Support\Facades\DB;
 
 class StripePaymentController extends Controller
 {
@@ -313,27 +314,48 @@ class StripePaymentController extends Controller
      */
     private function processSuccessfulPayment(Order $order, $paymentIntent)
     {
-        // Update the payment record
-        $order->payment->update([
-            'transaction_id' => $paymentIntent->id,
-            'payment_status' => 'completed',
-        ]);
+        try {
+            DB::beginTransaction();
 
-        // Update the order status
-        $order->update([
-            'payment_status' => 'completed',
-            'paid_at' => now() // Set the paid_at timestamp
-        ]);
+            // Update the payment record
+            $order->payment->update([
+                'transaction_id' => $paymentIntent->id,
+                'payment_status' => 'completed',
+            ]);
 
-        // Send order confirmation email
-        Mail::to($order->user->email)->queue(new OrderConfirmationMail($order));
-        \Log::info('Order confirmation email queued for order #' . $order->id);
+            // Update the order status
+            $order->update([
+                'payment_status' => 'completed',
+                'paid_at' => now() // Set the paid_at timestamp
+            ]);
 
-        Log::info('Payment successful for order #' . $order->id, [
-            'payment_intent_id' => $paymentIntent->id,
-            'amount' => $paymentIntent->amount / 100,
-            'paid_at' => now()->toDateTimeString()
-        ]);
+            // Reduce stock for all items in the order
+            foreach ($order->orderItems as $item) {
+                $item->product->decrement('quantity', $item->quantity);
+            }
+
+            // Clear the cart
+            Cart::where('user_id', $order->user_id)->delete();
+
+            // Send order confirmation email
+            Mail::to($order->user->email)->queue(new OrderConfirmationMail($order));
+            \Log::info('Order confirmation email queued for order #' . $order->id);
+
+            DB::commit();
+
+            Log::info('Payment successful for order #' . $order->id, [
+                'payment_intent_id' => $paymentIntent->id,
+                'amount' => $paymentIntent->amount / 100,
+                'paid_at' => now()->toDateTimeString()
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error processing successful payment: ' . $e->getMessage(), [
+                'order_id' => $order->id,
+                'payment_intent_id' => $paymentIntent->id
+            ]);
+            throw $e;
+        }
     }
 
     /**
