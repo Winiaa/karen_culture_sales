@@ -211,7 +211,10 @@
         
         // Add click event to each badge
         deleteBadges.forEach(badge => {
-            badge.addEventListener('click', function() {
+            badge.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
                 const imagePath = this.getAttribute('data-image-path');
                 const imageIndex = this.getAttribute('data-image-index');
                 const inputField = document.getElementById(`delete_image_${imageIndex}`);
@@ -234,87 +237,109 @@
 
 @push('styles')
 <style>
+    /* Base styles */
     .img-thumbnail {
         max-width: 100%;
         height: auto;
     }
+
     .alert {
         border-radius: 0.35rem;
         margin-bottom: 1.5rem;
     }
+
     .alert .btn-close {
         padding: 1.25rem;
     }
+
+    /* Main product image */
     .main-product-image {
-        max-height: 200px;
+        max-width: 300px;
+        max-height: 300px;
         width: auto;
+        height: auto;
+        object-fit: contain;
         display: block;
-        margin-bottom: 1rem;
+        margin: 0;
     }
     
     /* Additional Images Grid Layout */
     .additional-images-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-        gap: 2px;
-        margin-bottom: 1rem;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
     }
     
     .additional-image-item {
-        width: 100%;
+        position: relative;
+        aspect-ratio: 1;
+        overflow: hidden;
     }
     
     .image-container {
         position: relative;
-        overflow: hidden;
-        border-radius: 4px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         width: 100%;
-        padding-bottom: 100%; /* Creates a square aspect ratio */
-        margin: 0;
+        height: 100%;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        overflow: hidden;
     }
     
     .additional-image {
-        position: absolute;
-        top: 0;
-        left: 0;
         width: 100%;
         height: 100%;
         object-fit: cover;
+        position: absolute;
+        top: 0;
+        left: 0;
     }
     
+    /* Delete badge styles */
     .delete-badge {
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 24px;
-        height: 24px;
-        background-color: rgba(13, 110, 253, 0.9);
+        background: rgba(0, 123, 255, 0.7);
         color: white;
         border-radius: 50%;
+        width: 30px;
+        height: 30px;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        font-size: 10px;
-        transition: all 0.2s;
         z-index: 10;
         opacity: 0;
+        transition: all 0.2s ease;
     }
-    
-    .image-container:hover .delete-badge {
+
+    .additional-image-item:hover .delete-badge {
         opacity: 1;
     }
-    
+
     .delete-badge:hover {
-        background-color: #0d6efd;
-        transform: translate(-50%, -50%) scale(1.1);
+        background: rgba(0, 123, 255, 0.9);
     }
-    
+
     .delete-badge.active {
-        background-color: #dc3545;
         opacity: 1;
+        background: rgba(255, 0, 0, 0.9);
+    }
+
+    /* Image preview styles */
+    .image-preview-container {
+        margin-top: 1rem;
+        text-align: center;
+    }
+
+    .image-preview {
+        max-width: 100%;
+        max-height: 300px;
+        object-fit: contain;
+        margin: 0;
+        display: block;
     }
 </style>
 @endpush 

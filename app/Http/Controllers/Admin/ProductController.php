@@ -22,21 +22,31 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::with('category');
+        $categoryId = $request->get('category');
+        $search = $request->get('search');
+        
+        // Create a unique cache key based on the filters
+        $cacheKey = sprintf(
+            'admin.products.%s.%s.%s',
+            $categoryId ?? 'all',
+            $search ?? 'no-search',
+            $request->get('page', 1)
+        );
 
-        if ($request->has('category')) {
-            $query->where('category_id', $request->category);
-        }
+        $products = Cache::remember($cacheKey, 3600, function () use ($categoryId, $search) {
+            $query = Product::with('category');
 
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
-            });
-        }
+            if ($categoryId) {
+                $query->where('category_id', $categoryId);
+            }
 
-        $products = Cache::remember('admin.products', 3600, function () use ($query) {
+            if ($search) {
+                $query->where(function($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%");
+                });
+            }
+
             return $query->orderBy('created_at', 'desc')
                 ->paginate(20);
         });
@@ -103,11 +113,24 @@ class ProductController extends Controller
                 $filename = time() . '_' . $image->getClientOriginalName();
                 
                 // Optimize and save the image
-                $img = $manager->read($image)
-                    ->resize(800, null, function ($constraint) {
-                        $constraint->aspectRatio();
-                        $constraint->upsize();
-                    })
+                $img = $manager->read($image);
+                
+                // Get original dimensions
+                $width = $img->width();
+                $height = $img->height();
+                
+                // Calculate new dimensions while maintaining aspect ratio
+                $maxDimension = 800;
+                if ($width > $height) {
+                    $newWidth = $maxDimension;
+                    $newHeight = floor($height * ($maxDimension / $width));
+                } else {
+                    $newHeight = $maxDimension;
+                    $newWidth = floor($width * ($maxDimension / $height));
+                }
+                
+                // Resize image
+                $img->resize($newWidth, $newHeight)
                     ->save(storage_path('app/public/products/' . $filename));
                 
                 $imagePath = 'products/' . $filename;
@@ -120,11 +143,24 @@ class ProductController extends Controller
                     $filename = time() . '_' . $image->getClientOriginalName();
                     
                     // Optimize and save each additional image
-                    $img = $manager->read($image)
-                        ->resize(800, null, function ($constraint) {
-                            $constraint->aspectRatio();
-                            $constraint->upsize();
-                        })
+                    $img = $manager->read($image);
+                    
+                    // Get original dimensions
+                    $width = $img->width();
+                    $height = $img->height();
+                    
+                    // Calculate new dimensions while maintaining aspect ratio
+                    $maxDimension = 800;
+                    if ($width > $height) {
+                        $newWidth = $maxDimension;
+                        $newHeight = floor($height * ($maxDimension / $width));
+                    } else {
+                        $newHeight = $maxDimension;
+                        $newWidth = floor($width * ($maxDimension / $height));
+                    }
+                    
+                    // Resize image
+                    $img->resize($newWidth, $newHeight)
                         ->save(storage_path('app/public/products/' . $filename));
                     
                     $additionalImages[] = 'products/' . $filename;
@@ -207,11 +243,24 @@ class ProductController extends Controller
                 $filename = time() . '_' . $image->getClientOriginalName();
                 
                 // Optimize and save the new image
-                $img = $manager->read($image)
-                    ->resize(800, null, function ($constraint) {
-                        $constraint->aspectRatio();
-                        $constraint->upsize();
-                    })
+                $img = $manager->read($image);
+                
+                // Get original dimensions
+                $width = $img->width();
+                $height = $img->height();
+                
+                // Calculate new dimensions while maintaining aspect ratio
+                $maxDimension = 800;
+                if ($width > $height) {
+                    $newWidth = $maxDimension;
+                    $newHeight = floor($height * ($maxDimension / $width));
+                } else {
+                    $newHeight = $maxDimension;
+                    $newWidth = floor($width * ($maxDimension / $height));
+                }
+                
+                // Resize image
+                $img->resize($newWidth, $newHeight)
                     ->save(storage_path('app/public/products/' . $filename));
                 
                 $imagePath = 'products/' . $filename;
@@ -259,11 +308,24 @@ class ProductController extends Controller
                     $filename = time() . '_' . $image->getClientOriginalName();
                     
                     // Optimize and save each additional image
-                    $img = $manager->read($image)
-                        ->resize(800, null, function ($constraint) {
-                            $constraint->aspectRatio();
-                            $constraint->upsize();
-                        })
+                    $img = $manager->read($image);
+                    
+                    // Get original dimensions
+                    $width = $img->width();
+                    $height = $img->height();
+                    
+                    // Calculate new dimensions while maintaining aspect ratio
+                    $maxDimension = 800;
+                    if ($width > $height) {
+                        $newWidth = $maxDimension;
+                        $newHeight = floor($height * ($maxDimension / $width));
+                    } else {
+                        $newHeight = $maxDimension;
+                        $newWidth = floor($width * ($maxDimension / $height));
+                    }
+                    
+                    // Resize image
+                    $img->resize($newWidth, $newHeight)
                         ->save(storage_path('app/public/products/' . $filename));
                     
                     $additionalImages[] = 'products/' . $filename;

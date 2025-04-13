@@ -153,8 +153,9 @@
                         <label for="payment_status{{ $order->id }}" class="form-label">Payment Status</label>
                         <select class="form-select" id="payment_status{{ $order->id }}" name="payment_status" required>
                             <option value="pending" {{ $order->payment_status === 'pending' ? 'selected' : '' }}>Pending</option>
-                            <option value="completed" {{ $order->payment_status === 'completed' ? 'selected' : '' }}>Completed</option>
-                            <option value="refunded" {{ $order->payment_status === 'refunded' ? 'selected' : '' }}>Refunded</option>
+                            <option value="completed" {{ $order->payment_status === 'completed' && $order->order_status !== 'cancelled' ? 'selected' : '' }}>Completed</option>
+                            <option value="refunded" {{ $order->payment_status === 'refunded' || ($order->order_status === 'cancelled' && $order->payment && $order->payment->payment_method === 'stripe') ? 'selected' : '' }}>Refunded</option>
+                            <option value="cancelled" {{ $order->order_status === 'cancelled' && $order->payment && $order->payment->payment_method === 'cash_on_delivery' ? 'selected' : '' }}>Cancelled</option>
                         </select>
                     </div>
                     <div class="mb-3">

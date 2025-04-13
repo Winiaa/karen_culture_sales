@@ -19,6 +19,17 @@ class OrderController extends Controller
     public function index()
     {
         $orders = Order::where('user_id', auth()->id())
+            ->whereHas('payment', function($query) {
+                $query->where(function($q) {
+                    // Show cash on delivery orders
+                    $q->where('payment_method', 'cash_on_delivery')
+                      // Or show paid Stripe orders
+                      ->orWhere(function($sq) {
+                          $sq->where('payment_method', 'stripe')
+                             ->where('payment_status', 'completed');
+                      });
+                });
+            })
             ->with(['orderItems.product', 'payment'])
             ->orderBy('created_at', 'desc')
             ->paginate(10);

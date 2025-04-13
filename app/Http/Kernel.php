@@ -41,6 +41,8 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\RedirectAdminToAdminDashboard::class,
             \App\Http\Middleware\RedirectDriverToDriverDashboard::class,
             \App\Http\Middleware\DebugStripeRequests::class,
+            \App\Http\Middleware\CleanSessionOnUserSwitch::class,
+            \App\Http\Middleware\SessionTimeoutMiddleware::class,
         ],
 
         'api' => [

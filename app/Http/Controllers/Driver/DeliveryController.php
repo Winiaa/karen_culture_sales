@@ -178,47 +178,10 @@ class DeliveryController extends Controller
                 }
             }
 
-            // Update delivery status
-            $delivery->update([
-                'delivery_status' => 'delivered',
-                'delivered_at' => now(),
-                'delivery_notes' => $request->input('delivery_notes'),
-                'delivery_photo' => $deliveryPhoto
-            ]);
+            // Use the markAsDelivered method from the Delivery model
+            $delivery->markAsDelivered($deliveryPhoto, $request->input('delivery_notes'));
 
             \Log::info('Delivery status updated successfully', ['delivery_id' => $delivery->id]);
-
-            // Update order status and payment status for COD orders
-            if ($delivery->order->payment && 
-                $delivery->order->payment->payment_method === 'cash_on_delivery') {
-                
-                // Update payment status to completed for COD orders
-                $delivery->order->payment->update([
-                    'payment_status' => 'completed'
-                ]);
-                
-                $delivery->order->update([
-                    'payment_status' => 'completed',
-                    'order_status' => 'delivered',
-                    'completed_at' => now()
-                ]);
-                
-                \Log::info('Payment and order status updated for COD order', [
-                    'delivery_id' => $delivery->id,
-                    'order_id' => $delivery->order_id
-                ]);
-            } else {
-                // For non-COD orders, just update the order status
-                $delivery->order->update([
-                    'order_status' => 'delivered',
-                    'completed_at' => now()
-                ]);
-                
-                \Log::info('Order status updated for non-COD order', [
-                    'delivery_id' => $delivery->id,
-                    'order_id' => $delivery->order_id
-                ]);
-            }
 
             // Send delivery receipt email for all orders
             try {

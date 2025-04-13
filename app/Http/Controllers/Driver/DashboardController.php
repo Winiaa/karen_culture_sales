@@ -32,7 +32,7 @@ class DashboardController extends Controller
         
         // Get statistics
         $stats = [
-            'total_deliveries' => $driver->total_deliveries,
+            'total_deliveries' => $driver->completedDeliveries()->count(),
             'active_deliveries' => $driver->activeDeliveries()->count(),
             'completed_today' => $driver->completedDeliveries()
                 ->whereDate('delivered_at', today())

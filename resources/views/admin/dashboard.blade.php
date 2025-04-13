@@ -9,8 +9,8 @@
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <div class="d-flex align-items-center">
-                    <div class="bg-primary bg-opacity-10 p-3 rounded-3 me-3">
-                        <i class="fas fa-shopping-bag fa-2x text-primary"></i>
+                    <div class="bg-success bg-opacity-10 p-3 rounded-3 me-3" style="background-color: var(--success-light)">
+                        <i class="fas fa-shopping-bag fa-2x" style="color: var(--success-color)"></i>
                     </div>
                     <div>
                         <h6 class="card-title text-muted mb-0">Total Products</h6>
@@ -135,7 +135,7 @@
                             <div class="bar-container">
                                 <div class="bar" style="height: {{ $day['sales'] > 0 ? min($day['sales'] * 10, 100) : 5 }}%"></div>
                             </div>
-                            <div class="text-dark fw-bold mb-1 small" style="height: 20px; font-size: 0.8rem;">@baht($day['sales'] * 100)</div>
+                            <div class="text-dark fw-bold mb-1 small" style="height: 20px; font-size: 0.8rem;">@baht($day['sales'])</div>
                         </div>
                         @endforeach
                     </div>

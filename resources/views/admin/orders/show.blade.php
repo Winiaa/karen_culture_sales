@@ -240,8 +240,8 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Delivery Information</h5>
                     @if($order->delivery)
-                        <span class="badge bg-{{ $order->delivery->delivery_status === 'delivered' ? 'success' : ($order->delivery->delivery_status === 'failed' ? 'danger' : ($order->delivery->delivery_status === 'pending' ? 'warning' : 'primary')) }}">
-                            {{ ucfirst(str_replace('_', ' ', $order->delivery->delivery_status)) }}
+                        <span class="badge bg-{{ $order->order_status === 'cancelled' ? 'danger' : ($order->delivery->delivery_status === 'delivered' ? 'success' : ($order->delivery->delivery_status === 'failed' ? 'danger' : ($order->delivery->delivery_status === 'pending' ? 'warning' : 'primary'))) }}">
+                            {{ $order->order_status === 'cancelled' ? 'Cancelled' : ucfirst(str_replace('_', ' ', $order->delivery->delivery_status)) }}
                         </span>
                     @endif
                 </div>
@@ -435,8 +435,9 @@
                                 <div class="col-md-9">
                                     <select class="form-select" id="payment_status{{ $order->id }}" name="payment_status" required>
                                         <option value="pending" {{ $order->payment_status === 'pending' ? 'selected' : '' }}>Pending</option>
-                                        <option value="completed" {{ $order->payment_status === 'completed' ? 'selected' : '' }}>Completed</option>
-                                        <option value="refunded" {{ $order->payment_status === 'refunded' ? 'selected' : '' }}>Refunded</option>
+                                        <option value="completed" {{ $order->payment_status === 'completed' && $order->order_status !== 'cancelled' ? 'selected' : '' }}>Completed</option>
+                                        <option value="refunded" {{ $order->payment_status === 'refunded' || ($order->order_status === 'cancelled' && $order->payment && $order->payment->payment_method === 'stripe') ? 'selected' : '' }}>Refunded</option>
+                                        <option value="cancelled" {{ $order->order_status === 'cancelled' && $order->payment && $order->payment->payment_method === 'cash_on_delivery' ? 'selected' : '' }}>Cancelled</option>
                                     </select>
                                     @if($order->payment->payment_method === 'cash_on_delivery')
                                         <small class="text-muted d-block mt-2">
@@ -545,8 +546,9 @@
                         <label for="payment_status{{ $order->id }}" class="form-label">Payment Status</label>
                         <select class="form-select" id="payment_status{{ $order->id }}" name="payment_status" required>
                             <option value="pending" {{ $order->payment_status === 'pending' ? 'selected' : '' }}>Pending</option>
-                            <option value="completed" {{ $order->payment_status === 'completed' ? 'selected' : '' }}>Completed</option>
-                            <option value="refunded" {{ $order->payment_status === 'refunded' ? 'selected' : '' }}>Refunded</option>
+                            <option value="completed" {{ $order->payment_status === 'completed' && $order->order_status !== 'cancelled' ? 'selected' : '' }}>Completed</option>
+                            <option value="refunded" {{ $order->payment_status === 'refunded' || ($order->order_status === 'cancelled' && $order->payment && $order->payment->payment_method === 'stripe') ? 'selected' : '' }}>Refunded</option>
+                            <option value="cancelled" {{ $order->order_status === 'cancelled' && $order->payment && $order->payment->payment_method === 'cash_on_delivery' ? 'selected' : '' }}>Cancelled</option>
                         </select>
                     </div>
                     <div class="mb-3">

@@ -52,12 +52,12 @@ class DriverController extends Controller
     public function store(Request $request): RedirectResponse
     {
         // Log the incoming request data for debugging
-        \Log::info('Driver creation request data:', $request->all());
+        Log::info('Driver creation request data:', $request->all());
         
         // First determine if we're using an existing user or creating a new one
         $isNewUser = $request->input('user_type') === 'new';
         
-        \Log::info('User type selected: ' . ($isNewUser ? 'new' : 'existing'));
+        Log::info('User type selected: ' . ($isNewUser ? 'new' : 'existing'));
         
         // Set up validation rules based on the user type
         $rules = [
@@ -94,7 +94,7 @@ class DriverController extends Controller
                 ]);
                 
                 $userId = $user->id;
-                \Log::info('Created new user with ID: ' . $userId);
+                Log::info('Created new user with ID: ' . $userId);
             } else {
                 // Use existing user
                 $userId = $request->user_id;
@@ -103,7 +103,7 @@ class DriverController extends Controller
                 // Only update usertype if it's not already set to driver
                 if ($user->usertype !== 'driver') {
                     $user->update(['usertype' => 'driver']);
-                    \Log::info('Updated existing user ' . $userId . ' to driver type');
+                    Log::info('Updated existing user ' . $userId . ' to driver type');
                 }
             }
             
@@ -117,7 +117,7 @@ class DriverController extends Controller
                 'is_active' => $request->has('is_active'),
             ]);
             
-            \Log::info('Driver created successfully with ID: ' . $driver->id);
+            Log::info('Driver created successfully with ID: ' . $driver->id);
             
             DB::commit();
             
@@ -126,8 +126,8 @@ class DriverController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             
-            \Log::error('Error creating driver: ' . $e->getMessage());
-            \Log::error($e->getTraceAsString());
+            Log::error('Error creating driver: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
             
             return back()->withInput()
                 ->with('error', 'Error creating driver: ' . $e->getMessage());
@@ -150,7 +150,7 @@ class DriverController extends Controller
             
         // Get delivery statistics
         $deliveryStats = [
-            'total' => $driver->total_deliveries,
+            'total' => $driver->completedDeliveries()->count(),
             'active' => $driver->activeDeliveries()->count(),
             'completed' => $driver->completedDeliveries()->count(),
             'failed' => $driver->deliveries()->where('delivery_status', 'failed')->count(),
@@ -223,9 +223,9 @@ class DriverController extends Controller
             DB::commit();
             
             // Log admin activity
-            \Log::info('Admin driver update', [
-                'admin_id' => auth()->id(),
-                'admin_name' => auth()->user()->name,
+            Log::info('Admin driver update', [
+                'admin_id' => Auth::id(),
+                'admin_name' => Auth::user()->name,
                 'driver_id' => $driver->id,
                 'changes' => $changes
             ]);
@@ -235,7 +235,7 @@ class DriverController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             
-            \Log::error('Error updating driver: ' . $e->getMessage());
+            Log::error('Error updating driver: ' . $e->getMessage());
             
             return back()->with('error', 'There was a problem updating the driver: ' . $e->getMessage());
         }
