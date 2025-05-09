@@ -1,6 +1,16 @@
 @props(['order'])
 @inject('statusService', 'App\Services\OrderStatusService')
 
+@php
+    $paymentStatus = $order->payment ? $order->payment->payment_status : 'pending';
+    $orderStatusColor = $statusService->getOrderStatusBadgeColor($order->order_status);
+    $paymentStatusColor = $statusService->getPaymentStatusBadgeColor(
+        $paymentStatus,
+        $order->order_status,
+        $order->payment ? $order->payment->payment_method : null
+    );
+@endphp
+
 <div class="d-flex justify-content-between mb-4">
     {{-- Order Placed --}}
     <div class="text-center">
@@ -11,11 +21,11 @@
         <small class="text-muted">{{ $order->created_at->format('M d, Y') }}</small>
     </div>
 
-    <div class="status-line" style="background: {{ $statusService->getOrderStatusLineColor($order->order_status) }}"></div>
+    <div class="status-line" data-status-color="{{ $statusService->getOrderStatusLineColor($order->order_status) }}"></div>
 
     {{-- Payment --}}
     <div class="text-center">
-        <div class="status-circle {{ $order->order_status === 'cancelled' ? ($order->payment && $order->payment->payment_method === 'stripe' ? 'bg-info' : 'bg-danger') : ($order->payment_status === 'completed' ? 'bg-success' : 'bg-secondary') }}">
+        <div class="status-circle bg-{{ $paymentStatusColor }}">
             <i class="fas fa-dollar-sign"></i>
         </div>
         <p class="mt-2 mb-0">Payment</p>
@@ -27,12 +37,12 @@
                     Cancelled
                 @endif
             @else
-                {{ ucfirst($order->payment_status) }}
+                {{ ucfirst($paymentStatus) }}
             @endif
         </small>
     </div>
 
-    <div class="status-line" style="background: {{ $statusService->getPaymentStatusLineColor($order->payment_status, $order->order_status, $order->payment ? $order->payment->payment_method : null) }}"></div>
+    <div class="status-line" data-status-color="{{ $statusService->getPaymentStatusLineColor($paymentStatus, $order->order_status, $order->payment ? $order->payment->payment_method : null) }}"></div>
 
     {{-- Shipped --}}
     <div class="text-center">
@@ -47,7 +57,7 @@
         @endif
     </div>
 
-    <div class="status-line" style="background: {{ $statusService->getOrderStatusLineColor($order->order_status) }}"></div>
+    <div class="status-line" data-status-color="{{ $statusService->getOrderStatusLineColor($order->order_status) }}"></div>
 
     {{-- Delivered --}}
     <div class="text-center">
@@ -80,6 +90,18 @@
     flex-grow: 1;
     height: 2px;
     margin: 20px 10px;
+    background-color: var(--status-color, #e9ecef);
 }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.status-line').forEach(function(line) {
+        const color = line.dataset.statusColor;
+        line.style.setProperty('--status-color', color);
+    });
+});
+</script>
 @endpush 

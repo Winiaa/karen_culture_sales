@@ -146,7 +146,7 @@
                                 <p class="text-muted">{{ $order->created_at->format('M d, Y h:i A') }}</p>
                             </div>
                         </div>
-                        <div class="timeline-item {{ $order->order_status === 'cancelled' ? ($order->payment && $order->payment->payment_method === 'stripe' ? 'info' : 'failed') : ($order->payment_status === 'completed' ? 'completed' : '') }}">
+                        <div class="timeline-item {{ $order->order_status === 'cancelled' ? ($order->payment && $order->payment->payment_method === 'stripe' ? 'info' : 'failed') : ($order->payment && $order->payment->payment_status === 'completed' ? 'completed' : '') }}">
                             @if($order->order_status === 'cancelled')
                                 @if($order->payment && $order->payment->payment_method === 'stripe')
                                     <i class="fas fa-undo"></i>
@@ -158,9 +158,9 @@
                             @endif
                             <div class="timeline-content">
                                 <h6>
-                                    Payment {{ $order->order_status === 'cancelled' ? ($order->payment && $order->payment->payment_method === 'stripe' ? 'Refunded' : 'Cancelled') : ucfirst($order->payment_status) }}
+                                    Payment {{ $order->order_status === 'cancelled' ? ($order->payment && $order->payment->payment_method === 'stripe' ? 'Refunded' : 'Cancelled') : ($order->payment ? ucfirst($order->payment->payment_status) : 'Pending') }}
                                 </h6>
-                                <p class="text-muted">{{ $order->payment->updated_at->format('M d, Y h:i A') }}</p>
+                                <p class="text-muted">{{ $order->payment ? $order->payment->updated_at->format('M d, Y h:i A') : 'Not available' }}</p>
                             </div>
                         </div>
                         <div class="timeline-item {{ $order->order_status === 'cancelled' ? 'failed' : ($order->order_status === 'shipped' || $order->order_status === 'delivered' ? 'completed' : '') }}">
@@ -302,6 +302,12 @@
                                 <label class="form-label">Delivery Address <span class="text-danger">*</span></label>
                                 <textarea class="form-control" name="recipient_address" rows="2" required>{{ $order->delivery?->recipient_address ?? "$order->shipping_address, $order->shipping_city, $order->shipping_state, $order->shipping_country $order->shipping_zip" }}</textarea>
                             </div>
+
+                            <!-- Delivery Details Section -->
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3 mt-4">Delivery Details</h6>
+                            </div>
+
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Delivery Status <span class="text-danger">*</span></label>
                                 <select class="form-select" name="delivery_status" required>
@@ -317,43 +323,10 @@
                                 <label class="form-label">Estimated Delivery Date</label>
                                 <input type="date" class="form-control" name="estimated_delivery_date" value="{{ $order->delivery?->estimated_delivery_date?->format('Y-m-d') ?? '' }}">
                             </div>
-                            
-                            <!-- Additional Information Section (Collapsed by Default) -->
-                            <div class="col-12 mt-4">
-                                <button class="btn btn-outline-secondary btn-sm mb-3" type="button" data-bs-toggle="collapse" data-bs-target="#additionalShippingInfo" aria-expanded="false">
-                                    <i class="fas fa-plus-circle me-1"></i> Additional Information
-                                </button>
-                                
-                                <div class="collapse" id="additionalShippingInfo">
-                                    <div class="card card-body bg-light mb-3">
-                                        <div class="row">
-                                            <div class="col-md-6 mb-3">
-                                                <label class="form-label">External Tracking Number</label>
-                                                <input type="text" class="form-control" name="tracking_number" value="{{ $order->delivery?->tracking_number ?? '' }}">
-                                                <small class="text-muted">Only needed if using external shipping services</small>
-                                            </div>
-                                            <div class="col-md-6 mb-3">
-                                                <label class="form-label">Shipping Carrier</label>
-                                                <select class="form-select" name="carrier">
-                                                    <option value="">None (Using Our Drivers)</option>
-                                                    <option value="UPS" {{ $order->delivery?->carrier == 'UPS' ? 'selected' : '' }}>UPS</option>
-                                                    <option value="FedEx" {{ $order->delivery?->carrier == 'FedEx' ? 'selected' : '' }}>FedEx</option>
-                                                    <option value="USPS" {{ $order->delivery?->carrier == 'USPS' ? 'selected' : '' }}>USPS</option>
-                                                    <option value="DHL" {{ $order->delivery?->carrier == 'DHL' ? 'selected' : '' }}>DHL</option>
-                                                    <option value="Other" {{ !in_array($order->delivery?->carrier, ['UPS', 'FedEx', 'USPS', 'DHL', 'Amazon Logistics']) && !empty($order->delivery?->carrier) ? 'selected' : '' }}>Other</option>
-                                                </select>
-                                                <div id="other-carrier-container" class="mt-2 {{ !in_array($order->delivery?->carrier, ['UPS', 'FedEx', 'USPS', 'DHL', 'Amazon Logistics']) && !empty($order->delivery?->carrier) ? '' : 'd-none' }}">
-                                                    <input type="text" class="form-control" id="other-carrier" placeholder="Enter carrier name" value="{{ !in_array($order->delivery?->carrier, ['UPS', 'FedEx', 'USPS', 'DHL', 'Amazon Logistics']) && !empty($order->delivery?->carrier) ? $order->delivery?->carrier : '' }}">
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="col-12 mb-3">
-                                <label class="form-label">Delivery Notes</label>
-                                <textarea class="form-control" name="notes" rows="2" placeholder="Special instructions for delivery">{{ $order->delivery?->notes ?? '' }}</textarea>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Tracking Number</label>
+                                <input type="text" class="form-control" value="{{ $order->delivery?->tracking_number ?? '' }}" readonly>
+                                <small class="text-muted">System-generated tracking number for internal delivery tracking</small>
                             </div>
                             
                             <!-- Delivery Confirmation Details -->
@@ -409,83 +382,250 @@
                 </div>
             </div>
 
-            <!-- Payment Information -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Payment Information</h5>
+            <!-- Payment Details Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-money-bill me-2"></i>Payment Details
+                    </h5>
                 </div>
                 <div class="card-body">
-                    @if($order->payment)
-                        <form action="{{ route('admin.orders.payment.update', $order) }}" method="POST">
-                            @csrf
-                            @method('PUT')
-                            
-                            <div class="row mb-3">
-                                <label class="col-md-3 form-label">Payment Method</label>
-                                <div class="col-md-9">
-                                    <select class="form-select" name="payment_method">
-                                        <option value="stripe" {{ $order->payment->payment_method === 'stripe' ? 'selected' : '' }}>Credit Card (Stripe)</option>
-                                        <option value="cash_on_delivery" {{ $order->payment->payment_method === 'cash_on_delivery' ? 'selected' : '' }}>Cash on Delivery</option>
-                                    </select>
-                                </div>
+                    <!-- Order Summary -->
+                    <div class="mb-4">
+                        <h6 class="border-bottom pb-2">Order Summary</h6>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <small class="text-muted d-block">Subtotal:</small>
+                                <span>฿{{ number_format($order->subtotal, 2) }}</span>
                             </div>
-                            
-                            <div class="row mb-3">
-                                <label class="col-md-3 form-label">Payment Status</label>
-                                <div class="col-md-9">
-                                    <select class="form-select" id="payment_status{{ $order->id }}" name="payment_status" required>
-                                        <option value="pending" {{ $order->payment_status === 'pending' ? 'selected' : '' }}>Pending</option>
-                                        <option value="completed" {{ $order->payment_status === 'completed' && $order->order_status !== 'cancelled' ? 'selected' : '' }}>Completed</option>
-                                        <option value="refunded" {{ $order->payment_status === 'refunded' || ($order->order_status === 'cancelled' && $order->payment && $order->payment->payment_method === 'stripe') ? 'selected' : '' }}>Refunded</option>
-                                        <option value="cancelled" {{ $order->order_status === 'cancelled' && $order->payment && $order->payment->payment_method === 'cash_on_delivery' ? 'selected' : '' }}>Cancelled</option>
-                                    </select>
-                                    @if($order->payment->payment_method === 'cash_on_delivery')
-                                        <small class="text-muted d-block mt-2">
-                                            <i class="fas fa-info-circle me-1"></i> For Cash on Delivery orders, payment status will be automatically updated to "Completed" when a driver marks the delivery as "Delivered".
-                                        </small>
+                            <div class="col-6">
+                                <small class="text-muted d-block">Shipping Fee:</small>
+                                <span>
+                                    @if($order->subtotal >= config('shipping.free_shipping_threshold'))
+                                        <span class="text-success">Free</span>
+                                    @else
+                                        ฿{{ number_format($order->shipping_cost, 2) }}
+                                    @endif
+                                </span>
+                            </div>
+                            @if($order->discount_amount > 0)
+                            <div class="col-6">
+                                <small class="text-muted d-block">Discount:</small>
+                                <span class="text-danger">-฿{{ number_format($order->discount_amount, 2) }}</span>
+                            </div>
+                            @endif
+                            <div class="col-6">
+                                <small class="text-muted d-block">Total Amount:</small>
+                                <span class="fs-5 fw-bold">฿{{ number_format($order->total_amount, 2) }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Method & Status -->
+                    <div class="mb-4">
+                        <h6 class="border-bottom pb-2">Payment Information</h6>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <small class="text-muted d-block">Payment Method:</small>
+                                <div>
+                                    @if($order->payment)
+                                        @if($order->payment->payment_method === 'cash_on_delivery')
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-money-bill me-1"></i> Cash on Delivery
+                                            </span>
+                                        @elseif($order->payment->payment_method === 'stripe')
+                                            <span class="badge bg-info">
+                                                <i class="fab fa-stripe me-1"></i> Stripe
+                                            </span>
+                                        @endif
+                                    @else
+                                        <span class="badge bg-secondary">Not specified</span>
                                     @endif
                                 </div>
                             </div>
-                            
-                            <div class="row mb-3">
-                                <label class="col-md-3 form-label">Transaction ID</label>
-                                <div class="col-md-9">
-                                    <input type="text" class="form-control" name="transaction_id" value="{{ $order->payment->transaction_id }}">
+                            <div class="col-6">
+                                <small class="text-muted d-block">Payment Status:</small>
+                                <div>
+                                    @php
+                                        $statusConfig = [
+                                            'cancelled' => [
+                                                'stripe' => ['class' => 'bg-info', 'icon' => 'undo', 'text' => 'Refunded'],
+                                                'default' => ['class' => 'bg-danger', 'icon' => 'times-circle', 'text' => 'Cancelled']
+                                            ],
+                                            'completed' => ['class' => 'bg-success', 'icon' => 'check-circle', 'text' => 'Paid'],
+                                            'pending' => ['class' => 'bg-warning', 'icon' => 'clock', 'text' => 'Pending'],
+                                            'refunded' => ['class' => 'bg-info', 'icon' => 'undo', 'text' => 'Refunded']
+                                        ];
+                                        
+                                        $paymentStatus = $order->payment ? $order->payment->payment_status : 'pending';
+                                        
+                                        $status = $order->order_status === 'cancelled' 
+                                            ? ($order->payment && $order->payment->payment_method === 'stripe' 
+                                                ? $statusConfig['cancelled']['stripe'] 
+                                                : $statusConfig['cancelled']['default'])
+                                            : ($statusConfig[$paymentStatus] ?? ['class' => 'bg-secondary', 'icon' => 'question-circle', 'text' => 'Unknown']);
+                                    @endphp
+                                    <span class="badge {{ $status['class'] }}">
+                                        <i class="fas fa-{{ $status['icon'] }} me-1"></i> {{ $status['text'] }}
+                                    </span>
                                 </div>
                             </div>
-                            
-                            <div class="row">
-                                <div class="col-md-9 offset-md-3">
-                                    <button type="submit" class="btn btn-primary">Update Payment Information</button>
+                            @if($order->payment && $order->payment->transaction_id)
+                            <div class="col-12">
+                                <small class="text-muted d-block">Transaction ID:</small>
+                                <code>{{ $order->payment->transaction_id }}</code>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- Cancelled Order Details -->
+                    @if($order->order_status === 'cancelled')
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2">Cancellation Details</h6>
+                            @php
+                                $isStripePayment = $order->payment && $order->payment->payment_method === 'stripe';
+                                $alertClass = $isStripePayment ? 'alert-info' : 'alert-danger';
+                                $icon = $isStripePayment ? 'undo' : 'times-circle';
+                                $title = $isStripePayment ? 'Payment Refunded' : 'Order Cancelled';
+                            @endphp
+                            <div class="alert {{ $alertClass }}">
+                                <div class="d-flex">
+                                    <div class="me-3">
+                                        <i class="fas fa-{{ $icon }} fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="alert-heading mb-1">{{ $title }}</h6>
+                                        <p class="mb-0">
+                                            @if($isStripePayment)
+                                                The payment has been refunded to the customer's card.
+                                                @if($order->payment->refunded_at)
+                                                    <br>
+                                                    <small>Refunded on {{ $order->payment->refunded_at->format('M d, Y h:i A') }}</small>
+                                                @endif
+                                            @else
+                                                This order was cancelled before payment was collected.
+                                            @endif
+                                        </p>
+                                        @if($isStripePayment && $order->payment->refund_id)
+                                            <div class="mt-2">
+                                                <small class="text-muted">Refund ID:</small>
+                                                <code>{{ $order->payment->refund_id }}</code>
+                                            </div>
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
-                        </form>
-                    @else
-                        <div class="alert alert-warning">
-                            No payment information available for this order.
                         </div>
                     @endif
-                </div>
-            </div>
 
-            <!-- Actions -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Actions</h5>
-                </div>
-                <div class="card-body">
-                    <button type="button" class="btn btn-karen w-100 mb-2" data-bs-toggle="modal" data-bs-target="#updateStatusModal{{ $order->id }}" id="openStatusModal">
-                        Update Order Status
-                    </button>
-                    
-                    @if($order->order_status !== 'cancelled' && $order->order_status !== 'delivered')
-                    <form action="{{ route('admin.orders.status', $order) }}" method="POST" onsubmit="return confirm('Are you sure you want to cancel this order?');">
-                        @csrf
-                        @method('PUT')
-                        <input type="hidden" name="order_status" value="cancelled">
-                        <input type="hidden" name="payment_status" value="{{ $order->payment_status }}">
-                        <button type="submit" class="btn btn-outline-danger w-100">Cancel Order</button>
-                    </form>
+                    <!-- COD Payment Details -->
+                    @if($order->payment && $order->payment->payment_method === 'cash_on_delivery' && $order->delivery && $order->order_status !== 'cancelled')
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2">Collection Details</h6>
+                            <div class="mt-2">
+                                @if($order->delivery->payment_status === 'received')
+                                    <div class="alert alert-success mb-3">
+                                        <div class="d-flex">
+                                            <div class="me-3">
+                                                <i class="fas fa-check-circle fa-2x"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="alert-heading mb-1">Payment Collected</h6>
+                                                <p class="mb-0">
+                                                    @if($order->delivery->transfer_proof)
+                                                        Paid by bank transfer
+                                                    @else
+                                                        Paid in cash
+                                                    @endif
+                                                </p>
+                                                <small>
+                                                    Collected on {{ \Carbon\Carbon::parse($order->delivery->payment_received_at)->format('M d, Y h:i A') }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    @if($order->delivery->payment_notes)
+                                        <div class="mb-3">
+                                            <small class="text-muted d-block">Payment Notes:</small>
+                                            <div class="p-3 bg-light rounded">
+                                                {{ $order->delivery->payment_notes }}
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    @if($order->delivery->transfer_proof)
+                                        <div>
+                                            <small class="text-muted d-block mb-2">Transfer Slip:</small>
+                                            <a href="{{ Storage::url($order->delivery->transfer_proof) }}" 
+                                               target="_blank" 
+                                               class="d-inline-block">
+                                                <img src="{{ Storage::url($order->delivery->transfer_proof) }}" 
+                                                     alt="Transfer Proof" 
+                                                     class="img-fluid rounded shadow-sm"
+                                                     style="max-height: 150px;">
+                                            </a>
+                                        </div>
+                                    @endif
+                                @else
+                                    <div class="alert alert-warning mb-0">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-clock me-2"></i>
+                                            <div>Payment collection pending</div>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
+
+                    <!-- Stripe Payment Details -->
+                    @if($order->payment && $order->payment->payment_method === 'stripe')
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2">Stripe Payment Details</h6>
+                            <div class="row g-3">
+                                @if($order->payment->card_brand && $order->payment->card_last4)
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Card Type:</small>
+                                    <span>
+                                        <i class="fab fa-cc-{{ strtolower($order->payment->card_brand) }} me-1"></i>
+                                        {{ ucfirst($order->payment->card_brand) }}
+                                    </span>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Card Number:</small>
+                                    <span>**** **** **** {{ $order->payment->card_last4 }}</span>
+                                </div>
+                                @endif
+                                @if($order->payment->receipt_url)
+                                <div class="col-12">
+                                    <small class="text-muted d-block">Receipt:</small>
+                                    <a href="{{ $order->payment->receipt_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-receipt me-1"></i> View Receipt
+                                    </a>
+                                </div>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
+
+                    <!-- Payment Timestamp -->
+                    @if($order->payment)
+                        <div class="mt-3 pt-3 border-top">
+                            <small class="text-muted">
+                                <i class="far fa-clock me-1"></i>
+                                @if($order->payment->payment_status === 'completed' && $order->payment->paid_at)
+                                    Payment completed on {{ $order->payment->paid_at->format('M d, Y h:i A') }}
+                                @elseif($order->payment->payment_status === 'refunded' && $order->payment->refunded_at)
+                                    Payment refunded on {{ $order->payment->refunded_at->format('M d, Y h:i A') }}
+                                @elseif($order->payment->updated_at)
+                                    Last updated on {{ $order->payment->updated_at->format('M d, Y h:i A') }}
+                                @else
+                                    Payment information available
+                                @endif
+                            </small>
+                        </div>
                     @endif
                 </div>
             </div>
@@ -517,50 +657,6 @@
                 </div>
             </div>
             @endif
-        </div>
-    </div>
-</div>
-
-<!-- Status Update Modal -->
-<div class="modal fade" id="updateStatusModal{{ $order->id }}" tabindex="-1" aria-labelledby="updateStatusModalLabel{{ $order->id }}" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="updateStatusModalLabel{{ $order->id }}">Update Order #{{ $order->id }} Status</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{{ route('admin.orders.status', $order) }}" method="POST">
-                @method('PUT')
-                @csrf
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="order_status{{ $order->id }}" class="form-label">Order Status</label>
-                        <select class="form-select" id="order_status{{ $order->id }}" name="order_status" required>
-                            <option value="processing" {{ $order->order_status === 'processing' ? 'selected' : '' }}>Processing</option>
-                            <option value="shipped" {{ $order->order_status === 'shipped' ? 'selected' : '' }}>Shipped</option>
-                            <option value="delivered" {{ $order->order_status === 'delivered' ? 'selected' : '' }}>Delivered</option>
-                            <option value="cancelled" {{ $order->order_status === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="payment_status{{ $order->id }}" class="form-label">Payment Status</label>
-                        <select class="form-select" id="payment_status{{ $order->id }}" name="payment_status" required>
-                            <option value="pending" {{ $order->payment_status === 'pending' ? 'selected' : '' }}>Pending</option>
-                            <option value="completed" {{ $order->payment_status === 'completed' && $order->order_status !== 'cancelled' ? 'selected' : '' }}>Completed</option>
-                            <option value="refunded" {{ $order->payment_status === 'refunded' || ($order->order_status === 'cancelled' && $order->payment && $order->payment->payment_method === 'stripe') ? 'selected' : '' }}>Refunded</option>
-                            <option value="cancelled" {{ $order->order_status === 'cancelled' && $order->payment && $order->payment->payment_method === 'cash_on_delivery' ? 'selected' : '' }}>Cancelled</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="notes{{ $order->id }}" class="form-label">Notes (Optional)</label>
-                        <textarea class="form-control" id="notes{{ $order->id }}" name="notes" rows="3"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Update Status</button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
@@ -945,30 +1041,6 @@
                         errorDiv.remove();
                     }, 5000);
                 });
-            });
-        }
-
-        // Order status update handling
-        const updateStatusForm = document.getElementById('updateStatusModal{{ $order->id }} form');
-        const statusSelect = document.getElementById('order_status{{ $order->id }}');
-        const paymentStatusSelect = document.getElementById('payment_status{{ $order->id }}');
-        
-        if (updateStatusForm && statusSelect && paymentStatusSelect) {
-            // Show confirmation alert for certain status changes
-            updateStatusForm.addEventListener('submit', function(e) {
-                if (statusSelect.value === 'cancelled') {
-                    if (!confirm('Are you sure you want to cancel this order? This action will restore product inventory.')) {
-                        e.preventDefault();
-                        return false;
-                    }
-                }
-                
-                if (statusSelect.value === 'delivered') {
-                    if (!confirm('Are you sure you want to mark this order as delivered? This will update the delivery status too.')) {
-                        e.preventDefault();
-                        return false;
-                    }
-                }
             });
         }
     });

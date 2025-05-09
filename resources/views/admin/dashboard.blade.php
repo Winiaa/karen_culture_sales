@@ -133,7 +133,7 @@
                         <div class="revenue-bar">
                             <div class="day-label">{{ $day['date'] }}</div>
                             <div class="bar-container">
-                                <div class="bar" style="height: {{ $day['sales'] > 0 ? min($day['sales'] * 10, 100) : 5 }}%"></div>
+                                <div class="bar" style="--bar-height: {{ $day['sales'] > 0 ? min($day['sales'] * 10, 100) : 5 }}%; height: var(--bar-height)"></div>
                             </div>
                             <div class="text-dark fw-bold mb-1 small" style="height: 20px; font-size: 0.8rem;">@baht($day['sales'])</div>
                         </div>
@@ -171,7 +171,7 @@
                                 <td>{{ $order->user->name ?? 'Unknown User' }}</td>
                                 <td>@baht($order->total_amount)</td>
                                 <td>
-                                    <span class="badge bg-{{ $order->order_status === 'delivered' ? 'success' : ($order->order_status === 'cancelled' ? 'danger' : 'primary') }}">
+                                    <span class="badge bg-{{ $order->order_status === 'delivered' ? 'success' : ($order->order_status === 'cancelled' ? 'danger' : 'warning') }}">
                                         {{ ucfirst($order->order_status) }}
                                     </span>
                                 </td>

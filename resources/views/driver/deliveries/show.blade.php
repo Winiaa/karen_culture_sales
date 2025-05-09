@@ -21,7 +21,7 @@
         </div>
         <div class="card-body">
             <div class="row align-items-center">
-                <div class="col-md-6">
+                <div class="col-md-6 mb-3 mb-md-0">
                     <div class="d-flex align-items-center">
                         <span class="badge bg-{{ 
                             $delivery->delivery_status === 'assigned' ? 'warning' : 
@@ -42,33 +42,50 @@
                             <i class="far fa-clock"></i> Delivered on: {{ $delivery->delivered_at->format('M d, Y h:i A') }}
                         </p>
                     @endif
-                </div>
-                <div class="col-md-6 text-md-end mt-3 mt-md-0">
-                    <!-- Status update buttons based on current status -->
-                    @if($delivery->delivery_status === 'assigned')
-                        <form action="{{ route('driver.deliveries.pickup', $delivery) }}" method="POST" class="d-inline">
-                            @csrf
-                            @method('PUT')
-                            <button type="submit" class="btn btn-info">
-                                <i class="fas fa-box"></i> Mark as Picked Up
-                            </button>
-                        </form>
-                    @elseif($delivery->delivery_status === 'picked_up')
-                        <form action="{{ route('driver.deliveries.out-for-delivery', $delivery) }}" method="POST" class="d-inline">
-                            @csrf
-                            @method('PUT')
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-truck"></i> Mark as Out for Delivery
-                            </button>
-                        </form>
-                    @elseif($delivery->delivery_status === 'out_for_delivery')
-                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#deliveredModal">
-                            <i class="fas fa-check"></i> Mark as Delivered
-                        </button>
-                        <button type="button" class="btn btn-danger ms-2" data-bs-toggle="modal" data-bs-target="#failedModal">
-                            <i class="fas fa-exclamation-triangle"></i> Mark as Failed
-                        </button>
+
+                    @if($delivery->delivery_status === 'failed')
+                        <div class="alert alert-warning mt-3 mb-0">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </div>
+                                <div>
+                                    <p class="mb-0">{{ $delivery->delivery_notes }}</p>
+                                </div>
+                            </div>
+                        </div>
                     @endif
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex flex-column flex-sm-row gap-2 justify-content-md-end">
+                        <!-- Status update buttons based on current status -->
+                        @if($delivery->delivery_status === 'assigned')
+                            <form action="{{ route('driver.deliveries.pickup', $delivery) }}" method="POST" class="d-grid d-md-block">
+                                @csrf
+                                @method('PUT')
+                                <button type="submit" class="btn btn-info w-100 w-md-auto">
+                                    <i class="fas fa-box me-2"></i>Mark as Picked Up
+                                </button>
+                            </form>
+                        @elseif($delivery->delivery_status === 'picked_up')
+                            <form action="{{ route('driver.deliveries.out-for-delivery', $delivery) }}" method="POST" class="d-grid d-md-block">
+                                @csrf
+                                @method('PUT')
+                                <button type="submit" class="btn btn-primary w-100 w-md-auto">
+                                    <i class="fas fa-truck me-2"></i>Mark as Out for Delivery
+                                </button>
+                            </form>
+                        @elseif($delivery->delivery_status === 'out_for_delivery')
+                            <div class="d-grid d-md-flex gap-2 justify-content-md-end">
+                                <button type="button" class="btn btn-success w-100 w-md-auto order-md-2" data-bs-toggle="modal" data-bs-target="#deliveredModal">
+                                    <i class="fas fa-check me-2"></i>Mark as Delivered
+                                </button>
+                                <button type="button" class="btn btn-danger w-100 w-md-auto order-md-1" data-bs-toggle="modal" data-bs-target="#failedModal">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Mark as Failed
+                                </button>
+                            </div>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
@@ -134,13 +151,6 @@
                             <i class="fas fa-map-marker-alt"></i> View on Map
                         </a>
                     </div>
-                    
-                    @if($delivery->notes)
-                        <div class="mb-0">
-                            <label class="text-muted d-block">Special Instructions:</label>
-                            <div class="alert alert-info mb-0">{{ $delivery->notes }}</div>
-                        </div>
-                    @endif
                 </div>
             </div>
         </div>
@@ -247,27 +257,13 @@
                 @csrf
                 @method('PUT')
                 <div class="modal-header">
-                    <h5 class="modal-title" id="deliveredModalLabel">Mark as Delivered</h5>
+                    <h5 class="modal-title" id="deliveredModalLabel">Confirm Delivery</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    @if($delivery->order->payment && $delivery->order->payment->payment_method === 'cash_on_delivery')
-                    <div class="alert alert-warning mb-4">
-                        <div class="d-flex align-items-center">
-                            <div class="me-3 fs-3">
-                                <i class="fas fa-money-bill-wave"></i>
-                            </div>
-                            <div>
-                                <h5 class="alert-heading mb-1">Cash Payment Collection</h5>
-                                <p class="mb-0">This is a Cash on Delivery order. Please collect <strong>{{ number_format($delivery->order->total_amount, 2) }}</strong> from the customer before marking as delivered.</p>
-                                <small class="d-block mt-2">Payment will be automatically marked as completed when you confirm delivery.</small>
-                            </div>
-                        </div>
-                    </div>
-                    @endif
-                    
+                    <!-- Signature Section -->
                     <div class="mb-3">
-                        <label class="form-label">Signature Confirmation</label>
+                        <label class="form-label">Recipient's Signature</label>
                         <div class="border rounded p-3 bg-light">
                             <div class="text-center mb-2">
                                 <p class="mb-1">Please have the recipient sign below:</p>
@@ -275,7 +271,7 @@
                                     <i class="fas fa-eraser"></i> Clear Signature
                                 </button>
                             </div>
-                            <div class="signature-pad-container" id="signatureContainer">
+                            <div class="signature-pad-container">
                                 <canvas id="signaturePad" class="signature-pad"></canvas>
                             </div>
                             <input type="hidden" id="signature_data" name="signature_data">
@@ -287,10 +283,12 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="success_delivery_notes" class="form-label">Delivery Notes (optional)</label>
-                        <textarea class="form-control" id="success_delivery_notes" name="delivery_notes" rows="3" placeholder="Add any notes about the delivery..."></textarea>
+
+                    <!-- Delivery Notes -->
+                    <div class="mb-0">
+                        <label for="delivery_notes" class="form-label">Delivery Notes (optional)</label>
+                        <textarea class="form-control" id="delivery_notes" name="delivery_notes" rows="3" 
+                            placeholder="Add any notes about the delivery..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -332,6 +330,214 @@
         </div>
     </div>
 </div>
+
+<!-- Payment Section -->
+@if($delivery->order->payment && $delivery->order->payment->payment_method === 'cash_on_delivery')
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <div class="row align-items-center">
+            <div class="col-md-6 mb-2 mb-md-0">
+                <h5 class="mb-0">
+                    <i class="fas fa-money-bill me-2"></i>Payment Details
+                </h5>
+            </div>
+            @if($delivery->payment_status !== 'received' && $delivery->delivery_status === 'delivered')
+                <div class="col-md-6">
+                    <div class="d-flex flex-column flex-sm-row gap-2 justify-content-md-end">
+                        <button type="button" class="btn btn-success w-100 w-md-auto" data-bs-toggle="modal" data-bs-target="#cashPaymentModal">
+                            <i class="fas fa-money-bill me-2"></i>Mark Cash as Received
+                        </button>
+                        <button type="button" class="btn btn-primary w-100 w-md-auto" data-bs-toggle="modal" data-bs-target="#transferPaymentModal">
+                            <i class="fas fa-university me-2"></i>Record Bank Transfer
+                        </button>
+                    </div>
+                </div>
+            @endif
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Payment Status Alert -->
+        <div class="alert {{ $delivery->payment_status === 'received' ? 'alert-success' : 'alert-warning' }} mb-4">
+            <div class="d-flex align-items-center">
+                <div class="me-3 fs-3">
+                    @if($delivery->payment_status === 'received')
+                        <i class="fas fa-check-circle"></i>
+                    @else
+                        <i class="fas fa-exclamation-circle"></i>
+                    @endif
+                </div>
+                <div>
+                    <h5 class="alert-heading mb-1">
+                        @if($delivery->payment_status === 'received')
+                            Payment Collected
+                        @else
+                            Payment to Collect
+                        @endif
+                    </h5>
+                    <p class="mb-0 fs-4">฿{{ number_format($delivery->order->total_amount, 2) }}</p>
+                    @if($delivery->payment_status === 'received')
+                        <small class="text-success">
+                            @if($delivery->transfer_proof)
+                                Paid by bank transfer
+                            @else
+                                Paid in cash
+                            @endif
+                            on {{ \Carbon\Carbon::parse($delivery->payment_received_at)->format('d M Y, h:i A') }}
+                        </small>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        @if($delivery->payment_status === 'received')
+            <!-- Payment Details -->
+            <div class="row g-4">
+                <div class="col-12 col-md-6">
+                    <!-- Payment Method -->
+                    <div class="mb-4">
+                        <h6 class="mb-2">Payment Method:</h6>
+                        <div class="d-flex align-items-center">
+                            @if($delivery->transfer_proof)
+                                <span class="badge bg-primary">
+                                    <i class="fas fa-university me-1"></i> Bank Transfer
+                                </span>
+                            @else
+                                <span class="badge bg-success">
+                                    <i class="fas fa-money-bill me-1"></i> Cash
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- Payment Notes -->
+                    @if($delivery->payment_notes)
+                        <div class="mb-4">
+                            <h6 class="mb-2">Payment Notes:</h6>
+                            <div class="p-3 bg-light rounded">
+                                {{ $delivery->payment_notes }}
+                            </div>
+                        </div>
+                    @endif
+                </div>
+
+                <!-- Transfer Proof (if exists) -->
+                @if($delivery->transfer_proof)
+                    <div class="col-12 col-md-6">
+                        <h6 class="mb-2">Transfer Slip:</h6>
+                        <a href="{{ Storage::url($delivery->transfer_proof) }}" 
+                           target="_blank" 
+                           class="d-block">
+                            <img src="{{ Storage::url($delivery->transfer_proof) }}" 
+                                 alt="Transfer Proof" 
+                                 class="img-fluid rounded shadow-sm"
+                                 style="max-height: 200px; width: auto;">
+                        </a>
+                    </div>
+                @endif
+            </div>
+        @endif
+    </div>
+</div>
+@endif
+
+<!-- Cash Payment Modal -->
+<div class="modal fade" id="cashPaymentModal" tabindex="-1" aria-labelledby="cashPaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form action="{{ route('driver.deliveries.payment.update', $delivery) }}" method="POST">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title" id="cashPaymentModalLabel">Confirm Cash Payment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info mb-4">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <i class="fas fa-info-circle fa-2x"></i>
+                            </div>
+                            <div>
+                                <h5 class="alert-heading">Payment Amount</h5>
+                                <p class="mb-0">Please confirm you have received <strong>฿{{ number_format($delivery->order->total_amount, 2) }}</strong> in cash.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cash Collection Confirmation -->
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="cashConfirmation" name="cash_collected" required>
+                            <label class="form-check-label" for="cashConfirmation">
+                                I confirm that I have collected the full amount in cash
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Payment Notes -->
+                    <div class="mb-0">
+                        <label for="cash_payment_notes" class="form-label">Payment Notes (Optional)</label>
+                        <textarea class="form-control" id="cash_payment_notes" name="payment_notes" rows="3" 
+                            placeholder="Add any notes about the cash payment..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="button" class="btn btn-secondary w-100 w-md-auto" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success w-100 w-md-auto">
+                        <i class="fas fa-check me-2"></i>Confirm Cash Receipt
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Transfer Payment Modal -->
+<div class="modal fade" id="transferPaymentModal" tabindex="-1" aria-labelledby="transferPaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form action="{{ route('driver.deliveries.payment.update', $delivery) }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title" id="transferPaymentModalLabel">Record Bank Transfer</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info mb-4">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <i class="fas fa-info-circle fa-2x"></i>
+                            </div>
+                            <div>
+                                <h5 class="alert-heading">Payment Amount</h5>
+                                <p class="mb-0">Transfer amount should be <strong>฿{{ number_format($delivery->order->total_amount, 2) }}</strong></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Transfer Proof Upload -->
+                    <div class="mb-3">
+                        <label class="form-label">Upload Transfer Slip</label>
+                        <input type="file" class="form-control" name="transfer_proof" accept="image/*" required>
+                        <div class="form-text">Take a photo or upload the transfer slip</div>
+                    </div>
+
+                    <!-- Payment Notes -->
+                    <div class="mb-0">
+                        <label for="transfer_payment_notes" class="form-label">Payment Notes (Optional)</label>
+                        <textarea class="form-control" id="transfer_payment_notes" name="payment_notes" rows="3" 
+                            placeholder="Add any notes about the transfer..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="button" class="btn btn-secondary w-100 w-md-auto" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary w-100 w-md-auto">
+                        <i class="fas fa-check me-2"></i>Confirm Transfer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('styles')
@@ -342,7 +548,7 @@
         border: 1px solid #ced4da;
         background-color: #fff;
         margin-bottom: 8px;
-        touch-action: none; /* Prevent scrolling when signing on touch devices */
+        touch-action: none;
     }
     
     .signature-pad {
@@ -351,7 +557,13 @@
         background-color: #fff;
         border-radius: 4px;
         cursor: crosshair;
-        touch-action: none; /* Ensure touch events work properly */
+        touch-action: none;
+        border: 1px solid #e0e0e0;
+    }
+
+    .signature-pad canvas {
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
     }
 </style>
 @endpush
@@ -359,117 +571,225 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        let signaturePad = null;
-        
-        // Initialize signature pad only when the modal is shown
-        const deliveredModal = document.getElementById('deliveredModal');
-        if (deliveredModal) {
-            deliveredModal.addEventListener('shown.bs.modal', function() {
-                initializeSignaturePad();
-            });
-            
-            // Clean up when modal is hidden
-            deliveredModal.addEventListener('hidden.bs.modal', function() {
-                if (signaturePad) {
-                    signaturePad.clear();
-                    signaturePad = null;
-                }
-            });
-        }
-
-        function initializeSignaturePad() {
-            try {
-                const canvas = document.getElementById('signaturePad');
-                const statusIndicator = document.getElementById('signature-status');
-                const container = document.getElementById('signatureContainer');
-                
-                if (!canvas || !container) {
-                    console.error('Required elements not found');
-                    return;
-                }
-                
-                // Set canvas dimensions
-                canvas.width = container.clientWidth;
-                canvas.height = 200;
-                
-                // Initialize signature pad
-                signaturePad = new SignaturePad(canvas, {
+    // IIFE to avoid global scope pollution
+    (function() {
+        // Configuration namespace
+        const Config = {
+            signature: {
+                pad: {
                     backgroundColor: 'rgb(255, 255, 255)',
                     penColor: 'rgb(0, 0, 0)',
                     velocityFilterWeight: 0.7,
-                    minWidth: 0.5,
+                    minWidth: 1,
                     maxWidth: 2.5,
-                    throttle: 16
+                    throttle: 16,
+                    minDistance: 1
+                },
+                canvas: {
+                    height: 200,
+                    maxWidth: 800,
+                    imageQuality: 0.8
+                }
+            },
+            selectors: {
+                modal: '#deliveredModal',
+                canvas: '#signaturePad',
+                form: '#deliveryForm',
+                submitBtn: '#confirmDeliveryBtn',
+                clearBtn: '#clearSignature',
+                statusIndicator: '#signature-status',
+                signatureInput: '#signature_data'
+            }
+        };
+
+        // State management
+        const State = {
+            signaturePad: null,
+            isProcessing: false
+        };
+
+        // UI utilities
+        const UI = {
+            elements: {},
+            
+            // Initialize element references
+            init() {
+                Object.entries(Config.selectors).forEach(([key, selector]) => {
+                    this.elements[key] = document.querySelector(selector);
                 });
+            },
+            
+            // Loading state management
+            setLoading(isLoading) {
+                if (!this.elements.submitBtn) return;
                 
-                // Handle window resize
-                window.addEventListener('resize', function() {
-                    if (deliveredModal.classList.contains('show') && signaturePad) {
-                        const data = signaturePad.toData();
-                        canvas.width = container.clientWidth;
-                        canvas.height = 200;
-                        signaturePad.clear();
-                        if (data && data.length > 0) {
-                            signaturePad.fromData(data);
+                State.isProcessing = isLoading;
+                this.elements.submitBtn.disabled = isLoading;
+                this.elements.submitBtn.innerHTML = isLoading ? 
+                    '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing...' : 
+                    '<i class="fas fa-check"></i> Confirm Delivery';
+            },
+
+            // Update signature status
+            updateSignatureStatus(show) {
+                if (this.elements.statusIndicator) {
+                    this.elements.statusIndicator.style.display = show ? "block" : "none";
+                }
+            },
+
+            // Show error message
+            showError(message) {
+                alert(message);
+            }
+        };
+
+        // Canvas utilities
+        const CanvasUtils = {
+            setDimensions(canvas, container) {
+                const ratio = window.devicePixelRatio || 1;
+                const width = container.clientWidth;
+                const height = Config.signature.canvas.height;
+
+                canvas.width = width * ratio;
+                canvas.height = height * ratio;
+                canvas.style.width = width + 'px';
+                canvas.style.height = height + 'px';
+                canvas.getContext('2d').scale(ratio, ratio);
+            },
+
+            preventTouchEvents(element) {
+                ['touchstart', 'touchmove', 'touchend'].forEach(eventName => {
+                    element.addEventListener(eventName, e => e.preventDefault(), { passive: false });
+                });
+            },
+
+            async compressImage(dataUrl) {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let { width, height } = img;
+                        const maxWidth = Config.signature.canvas.maxWidth;
+
+                        if (width > maxWidth) {
+                            height = (maxWidth * height) / width;
+                            width = maxWidth;
                         }
-                    }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        resolve(canvas.toDataURL('image/jpeg', Config.signature.canvas.imageQuality));
+                    };
+                    img.onerror = reject;
+                    img.src = dataUrl;
                 });
+            }
+        };
+
+        // Form handling
+        const FormHandler = {
+            async handleSubmit(e) {
+                e.preventDefault();
                 
-                // Handle signature events
-                signaturePad.addEventListener("beginStroke", function() {
-                    if (statusIndicator) statusIndicator.style.display = "none";
-                });
+                if (State.isProcessing) return;
                 
-                signaturePad.addEventListener("endStroke", function() {
-                    if (statusIndicator) statusIndicator.style.display = "block";
-                });
+                if (!State.signaturePad || State.signaturePad.isEmpty()) {
+                    UI.showError('Please provide a signature before submitting.');
+                    return;
+                }
+
+                try {
+                    UI.setLoading(true);
+                    
+                    const originalSignature = State.signaturePad.toDataURL('image/png');
+                    const compressedSignature = await CanvasUtils.compressImage(originalSignature);
+                    
+                    UI.elements.signatureInput.value = compressedSignature;
+                    UI.elements.form.submit();
+                } catch (error) {
+                    console.error('Error processing signature:', error);
+                    UI.setLoading(false);
+                    UI.showError('Error saving signature. Please try again.');
+                }
+            }
+        };
+
+        // Signature pad management
+        const SignaturePadManager = {
+            init() {
+                if (!UI.elements.canvas) {
+                    console.error('Signature pad canvas not found');
+                    return;
+                }
+
+                const container = UI.elements.canvas.parentElement;
+                CanvasUtils.setDimensions(UI.elements.canvas, container);
                 
-                // Clear signature button
-                const clearButton = document.getElementById('clearSignature');
-                if (clearButton) {
-                    clearButton.addEventListener('click', function(e) {
+                State.signaturePad = new SignaturePad(UI.elements.canvas, Config.signature.pad);
+                
+                this.setupEventListeners();
+            },
+
+            setupEventListeners() {
+                // Signature events
+                State.signaturePad.addEventListener("beginStroke", () => UI.updateSignatureStatus(false));
+                State.signaturePad.addEventListener("endStroke", () => UI.updateSignatureStatus(true));
+                
+                // Clear button
+                if (UI.elements.clearBtn) {
+                    UI.elements.clearBtn.addEventListener('click', (e) => {
                         e.preventDefault();
-                        signaturePad.clear();
-                        if (statusIndicator) statusIndicator.style.display = "none";
+                        State.signaturePad.clear();
+                        UI.updateSignatureStatus(false);
                     });
                 }
                 
                 // Prevent scrolling while signing
-                canvas.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
-                canvas.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
-                canvas.addEventListener('touchend', e => e.preventDefault(), { passive: false });
+                CanvasUtils.preventTouchEvents(UI.elements.canvas);
                 
-                // Handle form submission
-                const deliveryForm = document.getElementById('deliveryForm');
-                if (deliveryForm) {
-                    deliveryForm.addEventListener('submit', function(e) {
-                        if (signaturePad && !signaturePad.isEmpty()) {
-                            try {
-                                document.getElementById('signature_data').value = signaturePad.toDataURL('image/png');
-                            } catch (err) {
-                                console.error('Error capturing signature:', err);
-                                if (!confirm('Error capturing signature. Continue without signature?')) {
-                                    e.preventDefault();
-                                    return false;
-                                }
-                            }
-                        } else if (!confirm('No signature provided. Continue without signature?')) {
-                            e.preventDefault();
-                            return false;
+                // Window resize
+                window.addEventListener('resize', () => {
+                    if (UI.elements.modal.classList.contains('show') && State.signaturePad) {
+                        const data = State.signaturePad.toData();
+                        CanvasUtils.setDimensions(UI.elements.canvas, UI.elements.canvas.parentElement);
+                        State.signaturePad.clear();
+                        if (data?.length) {
+                            State.signaturePad.fromData(data);
                         }
-                        
-                        const confirmBtn = document.getElementById('confirmDeliveryBtn');
-                        if (confirmBtn) {
-                            confirmBtn.disabled = true;
-                            confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
-                        }
-                    });
+                    }
+                });
+            },
+
+            clear() {
+                if (State.signaturePad) {
+                    State.signaturePad.clear();
+                    State.signaturePad = null;
                 }
-            } catch (err) {
-                console.error('Error setting up signature pad:', err);
             }
-        }
-    });
+        };
+
+        // Initialize everything when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            UI.init();
+
+            if (UI.elements.modal) {
+                UI.elements.modal.addEventListener('shown.bs.modal', () => {
+                    UI.setLoading(false);
+                    SignaturePadManager.init();
+                });
+
+                UI.elements.modal.addEventListener('hidden.bs.modal', () => {
+                    SignaturePadManager.clear();
+                });
+            }
+
+            if (UI.elements.form) {
+                UI.elements.form.addEventListener('submit', FormHandler.handleSubmit);
+            }
+        });
+    })();
 </script>
 @endpush 

@@ -482,6 +482,19 @@
             </div>
         </div>
 
+        @if($relatedProducts->count())
+            <div class="related-products my-5">
+                <h3>Related Products</h3>
+                <div class="row">
+                    @foreach($relatedProducts as $related)
+                        <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4">
+                            <x-product-card :product="$related" />
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
         <!-- Reviews Section -->
         <div class="reviews-section">
             <h3 class="mb-4">Customer Reviews</h3>

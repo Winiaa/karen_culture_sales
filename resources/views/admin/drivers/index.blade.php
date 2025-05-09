@@ -73,7 +73,8 @@
                                         <button type="button" 
                                                 class="btn btn-danger btn-sm delete-btn" 
                                                 title="Delete"
-                                                data-delete-url="{{ route('admin.drivers.destroy', $driver) }}">
+                                                data-delete-url="{{ route('admin.drivers.destroy', $driver) }}"
+                                                data-type="driver">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>

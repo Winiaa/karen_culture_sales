@@ -51,20 +51,26 @@ document.addEventListener('DOMContentLoaded', function() {
             let message = 'Are you sure you want to delete this ';
             
             switch(type) {
-                case 'categories':
-                    message += 'category?';
+                case 'category':
+                    message += 'category? This action cannot be undone.';
                     break;
-                case 'products':
-                    message += 'product?';
+                case 'product':
+                    message += 'product? This will also remove all associated reviews and images.';
                     break;
-                case 'drivers':
-                    message += 'driver?';
+                case 'driver':
+                    message += 'driver? This will remove their account and order assignments.';
                     break;
-                case 'users':
-                    message += 'user?';
+                case 'user':
+                    message += 'user? This will remove their account and all associated data.';
+                    break;
+                case 'review':
+                    message += 'review? This action cannot be undone.';
+                    break;
+                case 'order':
+                    message += 'order? This will permanently remove all order data.';
                     break;
                 default:
-                    message += 'item?';
+                    message += 'item? This action cannot be undone.';
             }
             
             deleteMessage.textContent = message;

@@ -158,10 +158,6 @@
                             <option value="cancelled" {{ $order->order_status === 'cancelled' && $order->payment && $order->payment->payment_method === 'cash_on_delivery' ? 'selected' : '' }}>Cancelled</option>
                         </select>
                     </div>
-                    <div class="mb-3">
-                        <label for="notes{{ $order->id }}" class="form-label">Notes (Optional)</label>
-                        <textarea class="form-control" id="notes{{ $order->id }}" name="notes" rows="3"></textarea>
-                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>

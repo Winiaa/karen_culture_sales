@@ -11,6 +11,8 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\StripePaymentController;
 use App\Http\Controllers\TrackingController;
+use App\Http\Controllers\NewsletterController;
+use App\Http\Controllers\DeliveryController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -55,7 +57,14 @@ require __DIR__.'/auth.php';
 Route::get('/track', [TrackingController::class, 'index'])->name('tracking.index');
 Route::post('/track', [TrackingController::class, 'track'])->name('tracking.track');
 
-// Protected routes
+// Cart routes - accessible to guests
+Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+Route::post('/cart/{product}', [CartController::class, 'add'])->name('cart.add');
+Route::put('/cart/{cart}', [CartController::class, 'update'])->name('cart.update');
+Route::delete('/cart/{cart}', [CartController::class, 'remove'])->name('cart.remove');
+Route::post('/cart/clear', [CartController::class, 'clear'])->name('cart.clear');
+
+// Protected routes that require authentication
 Route::middleware(['auth'])->group(function () {
     // Profile routes
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -66,13 +75,6 @@ Route::middleware(['auth'])->group(function () {
 
     // Customer-only routes (redirect admins and drivers to their dashboards)
     Route::middleware([\App\Http\Middleware\RedirectAdminToAdminDashboard::class, \App\Http\Middleware\RedirectDriverToDriverDashboard::class])->group(function () {
-        // Cart routes
-        Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
-        Route::post('/cart/{product}', [CartController::class, 'add'])->name('cart.add');
-        Route::put('/cart/{cart}', [CartController::class, 'update'])->name('cart.update');
-        Route::delete('/cart/{cart}', [CartController::class, 'remove'])->name('cart.remove');
-        Route::post('/cart/clear', [CartController::class, 'clear'])->name('cart.clear');
-
         // Order routes
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
@@ -98,6 +100,10 @@ Route::middleware(['auth'])->group(function () {
         })->name('reviews.show');
     });
 });
+
+// Newsletter routes
+Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe'])->name('newsletter.subscribe');
+Route::get('/newsletter/unsubscribe/{email}', [NewsletterController::class, 'unsubscribe'])->name('newsletter.unsubscribe');
 
 // Include admin and driver routes
 require __DIR__.'/admin.php';

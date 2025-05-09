@@ -36,10 +36,12 @@ return new class extends Migration
             $product->save();
         }
 
-        // Finally, add the unique constraint
-        Schema::table('products', function (Blueprint $table) {
-            $table->unique('slug');
-        });
+        // Finally, add the unique constraint if it doesn't exist
+        if (!Schema::hasIndex('products', 'products_slug_unique')) {
+            Schema::table('products', function (Blueprint $table) {
+                $table->unique('slug');
+            });
+        }
     }
 
     /**

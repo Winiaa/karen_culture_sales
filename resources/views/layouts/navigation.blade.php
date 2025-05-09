@@ -77,13 +77,14 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link position-relative {{ request()->routeIs('cart.index') ? 'active' : '' }}" href="{{ route('cart.index') }}">
-                        <i class="fas fa-shopping-cart me-1"></i> Cart
-                        @auth
-                            <span id="cart-count" class="badge bg-accent position-absolute top-0 start-100 translate-middle rounded-pill">
-                                {{ App\Models\Cart::where('user_id', Auth::id())->sum('quantity') }}
+                    <a class="nav-link {{ request()->routeIs('cart.index') ? 'active' : '' }}" href="{{ route('cart.index') }}" aria-label="Shopping Cart">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span class="d-none d-xl-inline ms-1">Cart</span>
+                        @if(session('cart_count', 0) > 0)
+                            <span id="cart-count" class="badge rounded-pill">
+                                {{ session('cart_count', 0) }}
                             </span>
-                        @endauth
+                        @endif
                     </a>
                 </li>
                 

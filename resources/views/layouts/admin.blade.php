@@ -377,6 +377,101 @@
         .pagination .page-link {
             color: var(--primary-color);
         }
+        
+        /* Pagination responsiveness for all admin pages */
+        .pagination {
+            margin: 1rem 0;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.25rem;
+        }
+        
+        .page-link {
+            position: relative;
+            min-width: 2.5rem;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        
+        .page-item.active .page-link {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 576px) {
+            .pagination {
+                gap: 0.125rem;
+            }
+            
+            .page-link {
+                padding: 0.375rem 0.5rem;
+                font-size: 0.875rem;
+                min-width: 2rem;
+            }
+            
+            .page-item {
+                margin: 0;
+            }
+            
+            .pagination .page-item:not(.active):not(:first-child):not(:last-child):not(.prev):not(.next) {
+                display: none;
+            }
+            
+            .pagination .page-item.active .page-link {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+        }
+        
+        /* Tablet optimizations */
+        @media (min-width: 577px) and (max-width: 991.98px) {
+            .pagination {
+                gap: 0.25rem;
+            }
+            
+            .page-link {
+                padding: 0.5rem 0.75rem;
+                min-width: 2.25rem;
+            }
+        }
+        
+        /* Table responsiveness improvements */
+        .table-responsive {
+            margin-bottom: 1rem;
+            border-radius: 0.375rem;
+        }
+        
+        @media (max-width: 991.98px) {
+            .table-responsive {
+                padding: 0.5rem;
+            }
+            
+            .table th, 
+            .table td {
+                white-space: nowrap;
+                padding: 0.75rem 0.5rem;
+            }
+            
+            .table-hover tbody tr:hover {
+                background-color: rgba(0,0,0,.02);
+            }
+        }
+        
+        /* Card footer with pagination */
+        .card-footer .pagination {
+            margin: 0;
+        }
+        
+        @media (max-width: 576px) {
+            .card-footer {
+                padding: 0.75rem;
+            }
+            
+            .card-footer .pagination {
+                justify-content: center;
+            }
+        }
     </style>
     
     @stack('styles')
@@ -469,18 +564,6 @@
                 <h4 class="mb-0 d-inline-block">@yield('title')</h4>
                 <p class="text-muted mb-0">@yield('subtitle')</p>
             </div>
-            
-            @if(session('success'))
-                <div class="alert alert-success">
-                    {{ session('success') }}
-                </div>
-            @endif
-            
-            @if(session('error'))
-                <div class="alert alert-danger">
-                    {{ session('error') }}
-                </div>
-            @endif
             
             @yield('content')
         </div>

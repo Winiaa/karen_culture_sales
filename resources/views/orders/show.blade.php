@@ -10,27 +10,6 @@
         </ol>
     </nav>
 
-    @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
-        {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    @endif
-
-    @if(session('shipping_saved'))
-    <div class="alert alert-info alert-dismissible fade show mb-4" role="alert">
-        Your shipping information has been saved for future orders.
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    @endif
-
-    @if(request()->has('payment_success'))
-    <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
-        Your payment was successful!
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    @endif
-
     <div class="row">
         <div class="col-md-8">
             <!-- Order Status -->
@@ -80,11 +59,17 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between mb-2">
                         <span>Subtotal</span>
-                        <span>@baht($order->total_amount)</span>
+                        <span>@baht($order->subtotal)</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span>Shipping</span>
-                        <span>Free</span>
+                        <span>
+                            @if($order->subtotal >= config('shipping.free_shipping_threshold'))
+                                <span class="text-success">Free</span>
+                            @else
+                                @baht($order->shipping_cost)
+                            @endif
+                        </span>
                     </div>
                     <hr>
                     <div class="d-flex justify-content-between">
@@ -214,53 +199,16 @@
                         {{ $order->delivery->estimated_delivery_date->format('M d, Y') }}
                     </div>
                     @endif
-                    
-                    <div class="mt-4 pt-3 border-top">
-                        <h6><i class="fas fa-shipping-fast me-2"></i>Tracking Information</h6>
-                        <div class="mb-3">
-                            <strong>Tracking Number:</strong><br>
-                            <span class="tracking-number">{{ $order->delivery->tracking_number }}</span>
-                            
-                            <div class="mt-3">
-                                <a href="{{ route('tracking.index') }}?tracking_number={{ $order->delivery->tracking_number }}" class="btn btn-primary btn-block w-100">
-                                    <i class="fas fa-search me-2"></i> Track Your Package
-                                </a>
-                            </div>
-                            
-                            @if($order->delivery->carrier)
-                            <div class="mt-1">
-                                <strong>Shipping Company:</strong> {{ $order->delivery->carrier }}
-                                @php
-                                    $trackingUrl = null;
-                                    if ($order->delivery->carrier == 'UPS') {
-                                        $trackingUrl = 'https://www.ups.com/track?tracknum=' . $order->delivery->tracking_number;
-                                    } elseif ($order->delivery->carrier == 'FedEx') {
-                                        $trackingUrl = 'https://www.fedex.com/fedextrack/?trknbr=' . $order->delivery->tracking_number;
-                                    } elseif ($order->delivery->carrier == 'USPS') {
-                                        $trackingUrl = 'https://tools.usps.com/go/TrackConfirmAction?tLabels=' . $order->delivery->tracking_number;
-                                    } elseif ($order->delivery->carrier == 'DHL') {
-                                        $trackingUrl = 'https://www.dhl.com/us-en/home/tracking/tracking-express.html?submit=1&tracking-id=' . $order->delivery->tracking_number;
-                                    }
-                                @endphp
-                                
-                                @if($trackingUrl)
-                                <div class="mt-2">
-                                    <a href="{{ $trackingUrl }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-external-link-alt me-1"></i> Track on {{ $order->delivery->carrier }} Website
-                                    </a>
-                                </div>
-                                @endif
-                            </div>
-                            @endif
+
+                    <div class="mb-3">
+                        <strong>Tracking Number:</strong><br>
+                        <span class="tracking-number">{{ $order->delivery->tracking_number }}</span>
+                        <div class="mt-3">
+                            <a href="{{ route('tracking.index') }}?tracking_number={{ $order->delivery->tracking_number }}" class="btn btn-primary btn-block w-100">
+                                <i class="fas fa-search me-2"></i> Track Your Package
+                            </a>
                         </div>
                     </div>
-                    
-                    @if($order->delivery->notes)
-                    <div class="mb-3">
-                        <strong>Delivery Instructions:</strong><br>
-                        {{ $order->delivery->notes }}
-                    </div>
-                    @endif
                     
                     @if($order->delivery->delivered_at)
                     <div class="mb-3">
@@ -310,11 +258,11 @@
                         </div>
                     @endif
                     
-                    <form action="{{ route('orders.cancel', $order) }}" method="POST">
+                    <form action="{{ route('orders.cancel', $order) }}" method="POST" id="cancelOrderForm">
                         @csrf
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to cancel this order?')">
-                                Cancel Order
+                            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelOrderModal">
+                                <i class="fas fa-times-circle me-2"></i>Cancel Order
                             </button>
                         </div>
                     </form>
@@ -341,6 +289,30 @@
                     </div>
                 </div>
             @endif
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Order Modal -->
+<div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-labelledby="cancelOrderModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title" id="cancelOrderModalLabel">Cancel Order</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-4">
+                    <i class="fas fa-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+                </div>
+                <p class="text-center mb-0">Are you sure you want to cancel this order? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, Keep Order</button>
+                <button type="button" class="btn btn-danger" onclick="document.getElementById('cancelOrderForm').submit();">
+                    <i class="fas fa-times-circle me-2"></i>Yes, Cancel Order
+                </button>
+            </div>
         </div>
     </div>
 </div>

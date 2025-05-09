@@ -163,6 +163,7 @@ class StripePaymentController extends Controller
 
                 // Clear the cart
                 Cart::where('user_id', auth()->id())->delete();
+                session(['cart_count' => 0]);
 
                 // Store shipping info message in session if applicable
                 if ($order->user->save_shipping_info) {
@@ -277,6 +278,7 @@ class StripePaymentController extends Controller
 
                 // Clear the cart
                 Cart::where('user_id', auth()->id())->delete();
+                session(['cart_count' => 0]);
 
                 return response()->json([
                     'success' => true,
@@ -336,6 +338,7 @@ class StripePaymentController extends Controller
 
             // Clear the cart
             Cart::where('user_id', $order->user_id)->delete();
+            session(['cart_count' => 0]);
 
             // Send order confirmation email
             Mail::to($order->user->email)->queue(new OrderConfirmationMail($order));
@@ -458,6 +461,7 @@ class StripePaymentController extends Controller
 
                 // Clear the cart
                 Cart::where('user_id', auth()->id())->delete();
+                session(['cart_count' => 0]);
 
                 // Check if shipping information was saved for this order
                 $successMessage = 'Your payment was successful!';

@@ -1,0 +1,129 @@
+@startuml Karen Culture Sales ERD
+
+!define table(x) class x << (T,#FFAAAA) >>
+!define primary_key(x) <b>PK</b> <u>x</u>
+!define foreign_key(x) <b>FK</b> <i>x</i>
+
+skinparam class {
+    BackgroundColor White
+    BorderColor Black
+    ArrowColor Black
+    FontSize 14
+}
+
+skinparam linetype ortho
+
+title Karen Culture Sales - Entity Relationship Diagram
+
+table(Users) {
+    primary_key(id (bigint))
+    name (varchar)
+    email (varchar)
+    password (varchar)
+    profile_picture (varchar)
+    usertype (enum)
+    default_recipient_name (varchar)
+    default_recipient_phone (varchar)
+    default_shipping_address (text)
+    email_verified_at (timestamp)
+    created_at (timestamp)
+    updated_at (timestamp)
+}
+
+table(Categories) {
+    primary_key(id (bigint))
+    category_name (varchar)
+    slug (varchar)
+    description (text)
+    image (varchar)
+    is_active (boolean)
+    created_at (timestamp)
+    updated_at (timestamp)
+}
+
+table(Products) {
+    primary_key(id (bigint))
+    foreign_key(category_id (bigint))
+    title (varchar)
+    slug (varchar)
+    description (text)
+    image (varchar)
+    additional_images (json)
+    price (decimal)
+    discount_price (decimal)
+    weight_kg (decimal)
+    delivery_fee_per_kg (decimal)
+    quantity (int)
+    status (enum)
+    created_at (timestamp)
+    updated_at (timestamp)
+}
+
+table(Orders) {
+    primary_key(id (bigint))
+    foreign_key(user_id (bigint))
+    total_amount (decimal)
+    payment_status (enum)
+    order_status (enum)
+    paid_at (timestamp)
+    created_at (timestamp)
+    updated_at (timestamp)
+}
+
+table(Order_Items) {
+    primary_key(id (bigint))
+    foreign_key(order_id (bigint))
+    foreign_key(product_id (bigint))
+    foreign_key(user_id (bigint))
+    quantity (int)
+    price (decimal)
+    subtotal (decimal)
+    created_at (timestamp)
+    updated_at (timestamp)
+}
+
+table(Cart) {
+    primary_key(id (bigint))
+    foreign_key(user_id (bigint))
+    foreign_key(product_id (bigint))
+    quantity (int)
+    created_at (timestamp)
+    updated_at (timestamp)
+}
+
+table(Reviews) {
+    primary_key(id (bigint))
+    foreign_key(user_id (bigint))
+    foreign_key(product_id (bigint))
+    rating (int)
+    comment (varchar)
+    status (enum)
+    created_at (timestamp)
+    updated_at (timestamp)
+}
+
+table(Delivery) {
+    primary_key(id (bigint))
+    foreign_key(order_id (bigint))
+    total_weight (decimal)
+    total_delivery_fee (decimal)
+    delivery_status (varchar)
+    created_at (timestamp)
+    updated_at (timestamp)
+}
+
+' Relationships
+Categories ||--o{ Products
+Products ||--o{ Order_Items
+Products ||--o{ Cart
+Products ||--o{ Reviews
+
+Users ||--o{ Orders
+Users ||--o{ Cart
+Users ||--o{ Reviews
+Users ||--o{ Order_Items
+
+Orders ||--|{ Order_Items
+Orders ||--|| Delivery
+
+@enduml 

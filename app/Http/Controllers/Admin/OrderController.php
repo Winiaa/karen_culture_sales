@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Driver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -290,7 +291,8 @@ class OrderController extends Controller
                 'tracking_number' => 'nullable|string|max:255',
                 'estimated_delivery_date' => 'nullable|date_format:Y-m-d',
                 'carrier' => 'nullable|string|max:255',
-                'notes' => 'nullable|string',
+                'internal_notes' => 'nullable|string',
+                'customer_instructions' => 'nullable|string',
             ]);
 
             DB::beginTransaction();

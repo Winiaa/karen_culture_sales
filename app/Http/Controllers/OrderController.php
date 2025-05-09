@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\Cart;
+use App\Models\User;
 use App\Models\OrderItem;
 use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use App\Mail\OrderConfirmationMail;
 use Illuminate\Support\Facades\Mail;
 
@@ -18,7 +21,7 @@ class OrderController extends Controller
      */
     public function index()
     {
-        $orders = Order::where('user_id', auth()->id())
+        $orders = Order::where('user_id', Auth::id())
             ->whereHas('payment', function($query) {
                 $query->where(function($q) {
                     // Show cash on delivery orders
@@ -26,13 +29,13 @@ class OrderController extends Controller
                       // Or show paid Stripe orders
                       ->orWhere(function($sq) {
                           $sq->where('payment_method', 'stripe')
-                             ->where('payment_status', 'completed');
+                             ->whereIn('payment_status', ['completed', 'refunded']);
                       });
                 });
             })
             ->with(['orderItems.product', 'payment'])
             ->orderBy('created_at', 'desc')
-            ->paginate(10);
+            ->paginate(5);
 
         return view('orders.index', compact('orders'));
     }
@@ -42,7 +45,7 @@ class OrderController extends Controller
      */
     public function show(Order $order)
     {
-        if ($order->user_id !== auth()->id()) {
+        if ($order->user_id !== Auth::id()) {
             abort(403);
         }
 
@@ -65,17 +68,18 @@ class OrderController extends Controller
 
         // Save shipping information if requested
         if ($request->has('save_shipping_info') && $request->save_shipping_info) {
-            auth()->user()->update([
+            $user = User::find(Auth::id());
+            $user->update([
                 'default_recipient_name' => $request->recipient_name,
                 'default_recipient_phone' => $request->recipient_phone,
                 'default_shipping_address' => $request->recipient_address,
                 'save_shipping_info' => true
             ]);
             
-            \Log::info('Shipping information saved for user #' . auth()->id());
+            Log::info('Shipping information saved for user #' . Auth::id());
         }
 
-        $cartItems = Cart::where('user_id', auth()->id())
+        $cartItems = Cart::where('user_id', Auth::id())
             ->with('product')
             ->get();
 
@@ -87,11 +91,11 @@ class OrderController extends Controller
             DB::beginTransaction();
             
             // Log the order creation attempt
-            \Log::info('Creating order for user #' . auth()->id() . ' with ' . $cartItems->count() . ' items');
+            Log::info('Creating order for user #' . Auth::id() . ' with ' . $cartItems->count() . ' items');
 
             // For Stripe payments, check for existing pending orders
             if ($request->payment_method === 'stripe') {
-                $existingOrder = Order::where('user_id', auth()->id())
+                $existingOrder = Order::where('user_id', Auth::id())
                     ->whereHas('payment', function($q) {
                         $q->where('payment_method', 'stripe')
                           ->where('payment_status', 'pending');
@@ -99,33 +103,54 @@ class OrderController extends Controller
                     ->first();
 
                 if ($existingOrder) {
-                    \Log::info('Found existing pending Stripe order #' . $existingOrder->id);
-                    DB::commit();
-                    return redirect()->route('payments.stripe', $existingOrder);
+                    try {
+                        Log::info('Found existing pending Stripe order #' . $existingOrder->id . ', cancelling it');
+                        // Cancel the existing order
+                        $existingOrder->update([
+                            'order_status' => 'cancelled',
+                            'payment_status' => 'cancelled'
+                        ]);
+                        $existingOrder->payment()->update([
+                            'payment_status' => 'cancelled'
+                        ]);
+                        Log::info('Successfully cancelled existing order #' . $existingOrder->id);
+                    } catch (\Exception $e) {
+                        Log::error('Failed to cancel existing order: ' . $e->getMessage(), [
+                            'order_id' => $existingOrder->id,
+                            'error' => $e->getMessage()
+                        ]);
+                        // Continue with new order creation even if cancellation fails
+                    }
                 }
             }
 
             // Calculate total (add validation to ensure positive amount)
-            $total = $cartItems->sum(function($item) {
+            $subtotal = $cartItems->sum(function($item) {
                 return $item->quantity * $item->product->final_price;
             });
             
-            if ($total <= 0) {
-                \Log::error('Invalid order total: $' . $total);
+            if ($subtotal <= 0) {
+                Log::error('Invalid order total: $' . $subtotal);
                 return back()->with('error', 'Invalid order total. Please contact support.');
             }
             
-            \Log::info('Order total calculated: $' . $total);
+            // Calculate shipping cost
+            $shippingCost = $subtotal >= config('shipping.free_shipping_threshold') ? 0 : config('shipping.default_shipping_cost');
+            $total = $subtotal + $shippingCost;
+            
+            Log::info('Order total calculated: $' . $total . ' (Subtotal: $' . $subtotal . ', Shipping: $' . $shippingCost . ')');
 
             // Create order
             $order = Order::create([
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
                 'total_amount' => $total,
+                'subtotal' => $subtotal,
+                'shipping_cost' => $shippingCost,
                 'payment_status' => 'pending',
                 'order_status' => 'processing'
             ]);
             
-            \Log::info('Order #' . $order->id . ' created');
+            Log::info('Order #' . $order->id . ' created');
 
             // Create order items
             foreach ($cartItems as $item) {
@@ -142,7 +167,7 @@ class OrderController extends Controller
                 }
             }
             
-            \Log::info('Order items created for order #' . $order->id);
+            Log::info('Order items created for order #' . $order->id);
 
             // Create delivery record
             $delivery = $order->delivery()->create([
@@ -152,11 +177,10 @@ class OrderController extends Controller
                 'recipient_address' => $request->recipient_address,
                 'delivery_status' => 'pending',
                 'estimated_delivery_date' => now()->addDays(3), // Set default delivery time to 3 days from order date
-                'notes' => $request->notes ?? null,
                 'tracking_number' => 'TRK-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 10)) // Generate unique tracking number
             ]);
             
-            \Log::info('Delivery record created for order #' . $order->id);
+            Log::info('Delivery record created for order #' . $order->id);
 
             // Create payment record
             Payment::create([
@@ -165,26 +189,27 @@ class OrderController extends Controller
                 'payment_status' => 'pending'
             ]);
             
-            \Log::info('Payment record created for order #' . $order->id);
+            Log::info('Payment record created for order #' . $order->id);
             
             // For Stripe payments, redirect to dedicated Stripe payment page
             if ($request->payment_method === 'stripe') {
                 // Commit the transaction but don't clear the cart yet
                 DB::commit();
                 
-                \Log::info('Redirecting to Stripe payment for order #' . $order->id);
+                Log::info('Redirecting to Stripe payment for order #' . $order->id);
                 return redirect()->route('payments.stripe', $order);
             }
             
             // For cash on delivery, we can clear the cart now
-            Cart::where('user_id', auth()->id())->delete();
-            \Log::info('Cart cleared for user #' . auth()->id() . ' after cash on delivery order');
+            Cart::where('user_id', Auth::id())->delete();
+            session(['cart_count' => 0]);
+            Log::info('Cart cleared for user #' . Auth::id() . ' after cash on delivery order');
             
             DB::commit();
 
             // Send order confirmation email
-            Mail::to(auth()->user()->email)->send(new OrderConfirmationMail($order));
-            \Log::info('Order confirmation email sent for order #' . $order->id);
+            Mail::to(Auth::user()->email)->send(new OrderConfirmationMail($order));
+            Log::info('Order confirmation email sent for order #' . $order->id);
 
             $successMessage = 'Order placed successfully.';
             
@@ -198,8 +223,16 @@ class OrderController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Order creation error: ' . $e->getMessage());
-            return back()->with('error', 'Something went wrong. Please try again.');
+            Log::error('Order creation error: ' . $e->getMessage(), [
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => Auth::id(),
+                'cart_items' => $cartItems->count(),
+                'payment_method' => $request->payment_method
+            ]);
+            return back()->with('error', 'Something went wrong. Please try again. Error: ' . $e->getMessage());
         }
     }
 
@@ -208,7 +241,7 @@ class OrderController extends Controller
      */
     public function cashPayment(Order $order)
     {
-        if ($order->user_id !== auth()->id()) {
+        if ($order->user_id !== Auth::id()) {
             abort(403);
         }
 
@@ -227,7 +260,7 @@ class OrderController extends Controller
     public function cancel(Order $order)
     {
         // Check order ownership
-        if ($order->user_id !== auth()->id()) {
+        if ($order->user_id !== Auth::id()) {
             abort(403, 'You do not own this order.');
         }
         
@@ -256,7 +289,7 @@ class OrderController extends Controller
             DB::beginTransaction();
 
             // Log cancellation attempt
-            \Log::info('Attempting to cancel order', [
+            Log::info('Attempting to cancel order', [
                 'order_id' => $order->id,
                 'payment_method' => $order->payment ? $order->payment->payment_method : 'none',
                 'payment_status' => $order->payment ? $order->payment->payment_status : 'none',
@@ -278,7 +311,7 @@ class OrderController extends Controller
                 $order->payment->payment_status === 'completed' && 
                 $order->isWithinStripeCancellationWindow()) {
                 
-                \Log::info('Processing refund for Stripe payment', [
+                Log::info('Processing refund for Stripe payment', [
                     'order_id' => $order->id,
                     'transaction_id' => $order->payment->transaction_id
                 ]);
@@ -294,7 +327,7 @@ class OrderController extends Controller
                     $order->payment->update([
                         'payment_status' => 'refunded'
                     ]);
-                    \Log::info('Payment status updated to refunded', [
+                    Log::info('Payment status updated to refunded', [
                         'order_id' => $order->id
                     ]);
                 } else {
@@ -302,7 +335,7 @@ class OrderController extends Controller
                     $order->payment->update([
                         'payment_status' => 'failed'
                     ]);
-                    \Log::error('Failed to process refund for order: ' . $order->id);
+                    Log::error('Failed to process refund for order: ' . $order->id);
                 }
             } else {
                 // For non-Stripe payments or outside cancellation window, just mark as failed
@@ -310,7 +343,7 @@ class OrderController extends Controller
                     $order->payment->update([
                         'payment_status' => 'failed'
                     ]);
-                    \Log::info('Payment status updated to failed (non-Stripe or outside window)', [
+                    Log::info('Payment status updated to failed (non-Stripe or outside window)', [
                         'order_id' => $order->id,
                         'payment_method' => $order->payment->payment_method,
                         'is_within_window' => $order->isWithinStripeCancellationWindow()
@@ -319,7 +352,7 @@ class OrderController extends Controller
             }
 
             DB::commit();
-            \Log::info('Order cancelled successfully', [
+            Log::info('Order cancelled successfully', [
                 'order_id' => $order->id
             ]);
 
@@ -327,7 +360,7 @@ class OrderController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Failed to cancel order: ' . $e->getMessage(), [
+            Log::error('Failed to cancel order: ' . $e->getMessage(), [
                 'order_id' => $order->id,
                 'exception' => get_class($e),
                 'file' => $e->getFile(),
@@ -343,7 +376,7 @@ class OrderController extends Controller
     public function confirmDelivery(Request $request, Order $order)
     {
         // Check order ownership
-        if ($order->user_id !== auth()->id()) {
+        if ($order->user_id !== Auth::id()) {
             abort(403, 'You do not own this order.');
         }
         
@@ -375,7 +408,7 @@ class OrderController extends Controller
             
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Failed to confirm delivery: ' . $e->getMessage());
+            Log::error('Failed to confirm delivery: ' . $e->getMessage());
             return back()->with('error', 'Unable to confirm delivery. Please try again.');
         }
     }

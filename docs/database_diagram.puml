@@ -1,0 +1,178 @@
+@startuml Karen Culture Sales Database
+
+!define table(x) class x << (T,#FFAAAA) >>
+!define primary_key(x) <u>x</u>
+!define foreign_key(x) #x#
+
+skinparam class {
+    BackgroundColor White
+    ArrowColor Black
+    BorderColor Black
+}
+
+skinparam linetype ortho
+
+title Karen Culture Sales Database Schema
+
+' Users table
+table(Users) {
+    primary_key(id): BIGINT
+    name: VARCHAR(255)
+    email: VARCHAR(255)
+    password: VARCHAR(255)
+    profile_picture: VARCHAR(255)
+    usertype: ENUM
+    default_recipient_name: VARCHAR(255)
+    default_recipient_phone: VARCHAR(20)
+    default_shipping_address: TEXT
+    save_shipping_info: BOOLEAN
+    email_verified_at: TIMESTAMP
+    remember_token: VARCHAR(100)
+    created_at: TIMESTAMP
+    updated_at: TIMESTAMP
+}
+
+' Categories table
+table(Categories) {
+    primary_key(id): BIGINT
+    category_name: VARCHAR(255)
+    description: TEXT
+    image: VARCHAR(255)
+    icon: VARCHAR(50)
+    created_at: TIMESTAMP
+    updated_at: TIMESTAMP
+}
+
+' Products table
+table(products) {
+    primary_key(id): BIGINT
+    foreign_key(category_id): BIGINT
+    title: VARCHAR(255)
+    slug: VARCHAR(255)
+    description: TEXT
+    image: VARCHAR(255)
+    additional_images: JSON
+    price: DECIMAL(10,2)
+    discount_price: DECIMAL(10,2)
+    quantity: INT
+    status: ENUM
+    created_at: TIMESTAMP
+    updated_at: TIMESTAMP
+}
+
+' Orders table
+table(Orders) {
+    primary_key(id): BIGINT
+    foreign_key(user_id): BIGINT
+    total_amount: DECIMAL(10,2)
+    subtotal: DECIMAL(10,2)
+    shipping_cost: DECIMAL(10,2)
+    payment_status: ENUM
+    order_status: ENUM
+    paid_at: TIMESTAMP
+    is_cancellable: BOOLEAN
+    created_at: TIMESTAMP
+    updated_at: TIMESTAMP
+}
+
+' Order Items table
+table(order_items) {
+    primary_key(id): BIGINT
+    foreign_key(order_id): BIGINT
+    foreign_key(product_id): BIGINT
+    quantity: INT
+    price: DECIMAL(10,2)
+    subtotal: DECIMAL(10,2)
+    created_at: TIMESTAMP
+    updated_at: TIMESTAMP
+}
+
+' Payments table
+table(Payments) {
+    primary_key(id): BIGINT
+    foreign_key(order_id): BIGINT
+    payment_method: ENUM
+    transaction_id: VARCHAR(255)
+    payment_status: ENUM
+    created_at: TIMESTAMP
+    updated_at: TIMESTAMP
+}
+
+' Drivers table
+table(drivers) {
+    primary_key(id): BIGINT
+    foreign_key(user_id): BIGINT
+    phone_number: VARCHAR(20)
+    vehicle_type: VARCHAR(50)
+    license_number: VARCHAR(50)
+    vehicle_plate: VARCHAR(20)
+    is_active: BOOLEAN
+    rating: DECIMAL(3,2)
+    total_deliveries: INT
+    created_at: TIMESTAMP
+    updated_at: TIMESTAMP
+}
+
+' Deliveries table
+table(deliveries) {
+    primary_key(id): BIGINT
+    foreign_key(order_id): BIGINT
+    foreign_key(driver_id): BIGINT
+    delivery_status: ENUM
+    delivered_at: TIMESTAMP
+    notes: TEXT
+    created_at: TIMESTAMP
+    updated_at: TIMESTAMP
+}
+
+' Cart table
+table(carts) {
+    primary_key(id): BIGINT
+    foreign_key(user_id): BIGINT
+    foreign_key(product_id): BIGINT
+    quantity: INT
+    created_at: TIMESTAMP
+    updated_at: TIMESTAMP
+}
+
+' Reviews table
+table(reviews) {
+    primary_key(id): BIGINT
+    foreign_key(user_id): BIGINT
+    foreign_key(product_id): BIGINT
+    rating: INT
+    comment: TEXT
+    status: ENUM
+    created_at: TIMESTAMP
+    updated_at: TIMESTAMP
+}
+
+' Newsletter Subscribers table
+table(newsletter_subscribers) {
+    primary_key(id): BIGINT
+    email: VARCHAR(255)
+    is_active: BOOLEAN
+    subscribed_at: TIMESTAMP
+    created_at: TIMESTAMP
+    updated_at: TIMESTAMP
+}
+
+' Relationships
+Users "1" -- "0..*" Orders : has >
+Users "1" -- "0..*" carts : has >
+Users "1" -- "0..*" reviews : writes >
+Users "1" -- "0..1" drivers : is >
+
+Categories "1" -- "0..*" products : contains >
+
+products "1" -- "0..*" order_items : has >
+products "1" -- "0..*" carts : in >
+products "1" -- "0..*" reviews : has >
+
+Orders "1" -- "0..*" order_items : contains >
+Orders "1" -- "0..1" Payments : has >
+Orders "1" -- "0..1" deliveries : has >
+
+drivers "1" -- "0..*" deliveries : handles >
+
+@enduml 

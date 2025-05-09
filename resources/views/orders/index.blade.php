@@ -59,7 +59,10 @@
                         <div>{{ $order->payment ? ($order->payment->payment_method === 'stripe' ? 'Credit Card' : 'Cash on Delivery') : 'N/A' }}</div>
                         <p class="mb-2">
                             <strong>Payment Status:</strong>
-                            <span class="badge bg-{{ $order->order_status === 'cancelled' ? ($order->payment && $order->payment->payment_method === 'stripe' ? 'info' : 'danger') : ($order->payment_status === 'completed' ? 'success' : ($order->payment_status === 'failed' || $order->payment_status === 'declined' || $order->payment_status === 'error' ? 'danger' : 'warning')) }}">
+                            @php
+                                $paymentStatus = $order->payment ? $order->payment->payment_status : 'pending';
+                            @endphp
+                            <span class="badge bg-{{ $order->order_status === 'cancelled' ? ($order->payment && $order->payment->payment_method === 'stripe' ? 'info' : 'danger') : ($paymentStatus === 'completed' ? 'success' : ($paymentStatus === 'failed' || $paymentStatus === 'declined' || $paymentStatus === 'error' ? 'danger' : 'warning')) }}">
                                 @if($order->order_status === 'cancelled')
                                     @if($order->payment && $order->payment->payment_method === 'stripe')
                                         Refunded
@@ -67,7 +70,7 @@
                                         Cancelled
                                     @endif
                                 @else
-                                    {{ ucfirst($order->payment_status) }}
+                                    {{ ucfirst($paymentStatus) }}
                                 @endif
                             </span>
                         </p>
@@ -123,7 +126,7 @@
     @endforelse
 
     <!-- Pagination -->
-    <div class="d-flex justify-content-center">
+    <div class="d-flex justify-content-center mb-5">
         {{ $orders->links() }}
     </div>
 </div>

@@ -122,11 +122,17 @@
                     
                     <div class="d-flex justify-content-between mb-2">
                         <span>Subtotal</span>
-                        <span>@baht($order->total_amount)</span>
+                        <span>@baht($order->subtotal)</span>
                     </div>
                     <div class="d-flex justify-content-between mb-3">
                         <span>Shipping</span>
-                        <span>Free</span>
+                        <span>
+                            @if($order->subtotal >= config('shipping.free_shipping_threshold'))
+                                <span class="text-success">Free</span>
+                            @else
+                                @baht($order->shipping_cost)
+                            @endif
+                        </span>
                     </div>
                     <div class="d-flex justify-content-between fw-bold">
                         <span>Total</span>

@@ -24,6 +24,10 @@ Route::middleware(['auth', \App\Http\Middleware\DriverMiddleware::class])
         Route::put('/deliveries/{delivery}/out-for-delivery', [DriverDeliveryController::class, 'outForDelivery'])->name('deliveries.out-for-delivery');
         Route::put('/deliveries/{delivery}/deliver', [DriverDeliveryController::class, 'deliver'])->name('deliveries.deliver');
         Route::put('/deliveries/{delivery}/fail', [DriverDeliveryController::class, 'fail'])->name('deliveries.fail');
+        Route::put('/deliveries/{delivery}/retry', [DriverDeliveryController::class, 'retry'])->name('deliveries.retry');
+        
+        // Payment Status Updates
+        Route::post('/deliveries/{delivery}/payment', [DriverDeliveryController::class, 'updatePayment'])->name('deliveries.payment.update');
         
         // Driver Profile Management
         Route::get('/profile/edit', [DriverProfileController::class, 'edit'])->name('profile.edit');

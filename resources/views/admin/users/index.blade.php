@@ -99,7 +99,8 @@
                                     <button type="button" 
                                             class="btn btn-sm btn-outline-danger delete-btn" 
                                             title="Delete"
-                                            data-delete-url="{{ route('admin.users.destroy', $user) }}">
+                                            data-delete-url="{{ route('admin.users.destroy', $user) }}"
+                                            data-type="user">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                     @endif

@@ -60,13 +60,14 @@
                 @forelse($products as $product)
                 <div class="col-12 col-md-6 col-lg-4 mb-4">
                     <div class="position-relative">
-                        @if($loop->iteration <= 3)
+                        @if(isset($topBestSellerIds) && in_array($product->id, $topBestSellerIds))
+                            @php $rank = array_search($product->id, $topBestSellerIds) + 1; @endphp
                             <div class="position-absolute top-0 start-0 m-2 z-1">
-                                @if($loop->iteration == 1)
+                                @if($rank == 1)
                                     <span class="badge bg-warning text-dark">#1 Best Seller</span>
-                                @elseif($loop->iteration == 2)
+                                @elseif($rank == 2)
                                     <span class="badge bg-secondary">#2 Best Seller</span>
-                                @else
+                                @elseif($rank == 3)
                                     <span class="badge bg-danger">#3 Best Seller</span>
                                 @endif
                             </div>
@@ -94,4 +95,4 @@
         </div>
     </div>
 </div>
-@endsection 
+@endsection

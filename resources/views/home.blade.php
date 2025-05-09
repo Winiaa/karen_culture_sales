@@ -91,7 +91,7 @@
                             <i class="fas fa-truck-fast fa-3x text-primary"></i>
                         </div>
                         <h3 class="h5 mb-3">Fast Delivery</h3>
-                        <p class="text-muted mb-0">Free shipping on orders over $50. Quick and secure delivery to your doorstep.</p>
+                        <p class="text-muted mb-0">Free shipping on orders over @baht(config('shipping.free_shipping_threshold')). Quick and secure delivery to your doorstep.</p>
                     </div>
                 </div>
             </div>
@@ -128,12 +128,13 @@
             <div class="col-md-8 text-center">
                 <h2 class="mb-4 text-white">Stay Updated</h2>
                 <p class="lead mb-4 text-white opacity-75">Subscribe to our newsletter for updates on new products, cultural events, and exclusive offers.</p>
-                <form class="row g-3 justify-content-center">
+                <form id="homeNewsletterForm" class="row g-3 justify-content-center">
                     <div class="col-md-8">
                         <div class="input-group">
-                            <input type="email" class="form-control form-control-lg" placeholder="Enter your email">
-                            <button class="btn btn-light btn-lg" type="submit">Subscribe</button>
+                            <input type="email" class="form-control form-control-lg" placeholder="Enter your email" id="homeNewsletterEmail" required>
+                            <button class="btn btn-light btn-lg" type="button" id="homeNewsletterBtn">Subscribe</button>
                         </div>
+                        <div id="homeNewsletterMessage" class="mt-2"></div>
                     </div>
                 </form>
             </div>
@@ -221,4 +222,8 @@
         background: linear-gradient(135deg, rgba(26, 71, 42, 0.1) 0%, rgba(26, 71, 42, 0.2) 100%);
     }
 </style>
+@endpush
+
+@push('scripts')
+@vite(['resources/js/newsletter.js'])
 @endpush 

@@ -1,0 +1,91 @@
+@startuml Karen Culture Sales Use Case
+
+skinparam usecase {
+    BackgroundColor #FEFECE
+    BorderColor #666666
+    ArrowColor #666666
+    FontSize 14
+}
+
+skinparam packageStyle rectangle
+left to right direction
+
+title <size:20>Karen Culture Sales System</size>
+
+' Actor Definitions
+:Guest: as Guest
+:Customer: as Customer
+:Admin: as Admin
+:Driver: as Driver
+
+' Actor Inheritance
+Guest <|-- Customer
+Guest <|-- Admin
+Guest <|-- Driver
+
+rectangle System {
+    usecase "Browse Products" as Browse
+    usecase "Search Products" as Search
+    usecase "Manage Cart" as Cart
+    usecase "Login/Register" as Login
+    usecase "Place Order" as Order
+    usecase "Track Order" as Track
+    
+    ' Admin use cases
+    usecase "Manage Products" as ManageProducts
+    usecase "Manage Categories" as ManageCategories
+    usecase "Manage Orders" as ManageOrders
+    usecase "Manage Users" as ManageUsers
+    usecase "Manage Drivers" as ManageDrivers
+    usecase "Review Management" as ManageReviews
+    usecase "Generate Sales Reports" as SalesReports
+    
+    ' Driver use cases (as secondary actor)
+    usecase "Manage Delivery" as Delivery
+    usecase "Update Delivery Status" as UpdateStatus
+    usecase "View Assigned Orders" as ViewOrders
+    usecase "Report Delivery Issues" as ReportIssues
+}
+
+' Guest use cases
+Guest --> Browse
+Guest --> Search
+Guest --> Cart
+Guest --> Login
+
+' Customer use cases
+Customer --> Browse
+Customer --> Search
+Customer --> Cart
+Customer --> Order
+Customer --> Track
+Customer --> Login
+
+' Admin use cases
+Admin --> ManageProducts
+Admin --> ManageCategories
+Admin --> ManageOrders
+Admin --> ManageUsers
+Admin --> ManageDrivers
+Admin --> ManageReviews
+Admin --> SalesReports
+Admin --> Login
+
+' Driver use cases (as secondary actor)
+Driver --> Delivery
+Driver --> UpdateStatus
+Driver --> ViewOrders
+Driver --> ReportIssues
+Driver --> Login
+
+' Include relationships
+Order ..> Track : <<include>>
+Track ..> UpdateStatus : <<include>>
+ManageOrders ..> ManageDrivers : <<include>>
+
+' Extend relationships
+Delivery <.. UpdateStatus : <<extend>>
+Delivery <.. ViewOrders : <<extend>>
+Delivery <.. ReportIssues : <<extend>>
+
+@enduml 

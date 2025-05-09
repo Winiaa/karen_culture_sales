@@ -1,0 +1,353 @@
+@startuml Class Diagram
+
+skinparam class {
+    BackgroundColor White
+    ArrowColor Black
+    BorderColor Black
+}
+
+' Regular Controllers
+class HomeController {
+    + index()
+    + about()
+    + contact()
+}
+
+class PageController {
+    + show(string $slug)
+}
+
+class ProfileController {
+    + show()
+    + edit()
+    + update(Request)
+    + updatePassword(Request)
+}
+
+class CartController {
+    + index()
+    + add(Request, Product)
+    + update(Request, $cart)
+    + remove($cart)
+    + clear()
+}
+
+class ProductController {
+    + index()
+    + show(Product)
+    + search(Request)
+    + filter(Request)
+}
+
+class CategoryController {
+    + index()
+    + show(Category)
+    + products(Category)
+}
+
+class OrderController {
+    + index()
+    + show(Order)
+    + store(Request)
+    + cancel(Order)
+    + cashPayment(Order)
+    + confirmDelivery(Request, Order)
+}
+
+class StripePaymentController {
+    + process(Order)
+    + webhook()
+    + success(Order)
+    + cancel(Order)
+}
+
+class TrackingController {
+    + index()
+    + track(Request)
+    + getStatus(string $tracking_number)
+}
+
+class ReviewController {
+    + store(Request)
+    + update(Request, Review)
+    + destroy(Review)
+}
+
+class ContactController {
+    + show()
+    + send(Request)
+}
+
+' Admin Controllers
+class AdminDashboardController {
+    + index()
+    + statistics()
+    + recentOrders()
+    + topProducts()
+}
+
+class AdminProductController {
+    + index()
+    + create()
+    + store(Request)
+    + edit(Product)
+    + update(Request, Product)
+    + destroy(Product)
+}
+
+class AdminCategoryController {
+    + index()
+    + create()
+    + store(Request)
+    + edit(Category)
+    + update(Request, Category)
+    + destroy(Category)
+}
+
+class AdminOrderController {
+    + index()
+    + show(Order)
+    + updateStatus(Request, Order)
+    + cancel(Order)
+}
+
+class AdminDriverController {
+    + index()
+    + create()
+    + store(Request)
+    + edit(Driver)
+    + update(Request, Driver)
+    + destroy(Driver)
+}
+
+class AdminUserController {
+    + index()
+    + create()
+    + store(Request)
+    + edit(User)
+    + update(Request, User)
+    + destroy(User)
+}
+
+class AdminProfileController {
+    + show()
+    + edit()
+    + update(Request)
+}
+
+class AdminReviewController {
+    + index()
+    + show(Review)
+    + approve(Review)
+    + reject(Review)
+}
+
+' Driver Controllers
+class DriverDashboardController {
+    + index()
+    + statistics()
+    + activeDeliveries()
+}
+
+class DriverDeliveryController {
+    + index()
+    + show(Delivery)
+    + accept(Delivery)
+    + start(Delivery)
+    + complete(Delivery)
+    + updateStatus(Request, Delivery)
+}
+
+class DriverProfileController {
+    + show()
+    + edit()
+    + update(Request)
+    + updateLocation(Request)
+}
+
+' Models
+class Cart {
+    + id: int
+    + user_id: int
+    + product_id: int
+    + quantity: int
+    + created_at: timestamp
+    + updated_at: timestamp
+}
+
+class Product {
+    + id: int
+    + category_id: int
+    + title: varchar
+    + slug: varchar
+    + description: text
+    + image: varchar
+    + additional_images: json
+    + price: decimal
+    + discount_price: decimal
+    + quantity: int
+    + status: varchar
+    + is_featured: boolean
+    + is_active: boolean
+    + created_at: timestamp
+    + updated_at: timestamp
+}
+
+class Category {
+    + id: int
+    + category_name: varchar
+    + description: text
+    + image: varchar
+    + icon: varchar
+    + slug: varchar
+    + is_active: boolean
+    + created_at: timestamp
+    + updated_at: timestamp
+}
+
+class User {
+    + id: int
+    + name: varchar
+    + email: varchar
+    + email_verified_at: timestamp
+    + password: varchar
+    + remember_token: varchar
+    + profile_picture: varchar
+    + usertype: varchar
+    + default_recipient_name: varchar
+    + default_recipient_phone: varchar
+    + default_shipping_address: text
+    + save_shipping_info: boolean
+    + stripe_id: varchar
+    + pm_type: varchar
+    + pm_last_four: varchar
+    + created_at: timestamp
+    + updated_at: timestamp
+}
+
+class Order {
+    + id: int
+    + user_id: int
+    + total_amount: decimal
+    + payment_status: varchar
+    + order_status: varchar
+    + paid_at: datetime
+    + is_cancellable: boolean
+    + shipping_address: text
+    + recipient_name: varchar
+    + recipient_phone: varchar
+    + notes: text
+    + created_at: timestamp
+    + updated_at: timestamp
+}
+
+class OrderItem {
+    + id: int
+    + order_id: int
+    + product_id: int
+    + quantity: int
+    + price: decimal
+    + subtotal: decimal
+    + created_at: timestamp
+    + updated_at: timestamp
+}
+
+class Payment {
+    + id: int
+    + order_id: int
+    + amount: decimal
+    + payment_method: varchar
+    + transaction_id: varchar
+    + payment_status: varchar
+    + refund_status: varchar
+    + stripe_payment_intent: varchar
+    + created_at: timestamp
+    + updated_at: timestamp
+}
+
+class Delivery {
+    + id: int
+    + order_id: int
+    + driver_id: int
+    + status: varchar
+    + tracking_number: varchar
+    + recipient_name: varchar
+    + recipient_phone: varchar
+    + recipient_address: text
+    + pickup_time: datetime
+    + delivered_at: datetime
+    + delivery_notes: text
+    + created_at: timestamp
+    + updated_at: timestamp
+}
+
+class Driver {
+    + id: int
+    + user_id: int
+    + phone_number: varchar
+    + vehicle_type: varchar
+    + license_number: varchar
+    + vehicle_plate: varchar
+    + is_active: boolean
+    + rating: decimal
+    + total_deliveries: int
+    + current_location: point
+    + created_at: timestamp
+    + updated_at: timestamp
+}
+
+class Review {
+    + id: int
+    + user_id: int
+    + product_id: int
+    + rating: int
+    + comment: text
+    + status: varchar
+    + approved_at: datetime
+    + created_at: timestamp
+    + updated_at: timestamp
+}
+
+' Model Relationships
+User "1" -- "*" Order : Many to many
+User "1" -- "*" Cart : Many to many
+User "1" -- "*" Review : Many to 1
+User "1" -- "1" Driver : 1 to 1
+Product "*" -- "1" Category : Many to 1
+Product "1" -- "*" Review : 1 to many
+Product "1" -- "*" Cart : 1 to many
+Order "1" -- "*" OrderItem : 1 to many
+Order "1" -- "1" Payment : 1 to 1
+Order "1" -- "1" Delivery : 1 to 1
+OrderItem "*" -- "1" Product : Many to 1
+Driver "1" -- "*" Delivery : 1 to many
+
+' Controller Dependencies
+Cart --> CartController
+Product --> ProductController
+Category --> CategoryController
+Order --> OrderController
+Payment --> StripePaymentController
+Delivery --> DeliveryController
+Review --> ReviewController
+User --> ProfileController
+User --> ContactController
+Order --> TrackingController
+Product --> HomeController
+
+' Admin Dependencies
+Product --> AdminProductController
+Order --> AdminOrderController
+Driver --> AdminDriverController
+Category --> AdminCategoryController
+User --> AdminUserController
+Review --> AdminReviewController
+User --> AdminProfileController
+Order --> AdminDashboardController
+
+' Driver Dependencies
+Delivery --> DriverDeliveryController
+Driver --> DriverProfileController
+Delivery --> DriverDashboardController
+
+@enduml 

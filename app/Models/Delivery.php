@@ -18,18 +18,20 @@ class Delivery extends Model
         'user_id',
         'driver_id',
         'tracking_number',
-        'carrier',
         'estimated_delivery_date',
         'delivered_at',
         'recipient_name',
         'recipient_phone',
         'recipient_address',
-        'notes',
         'delivery_status',
         'is_confirmed_by_customer',
         'confirmed_at',
         'delivery_photo',
-        'delivery_notes'
+        'delivery_notes',
+        'transfer_proof',
+        'payment_status',
+        'payment_received_at',
+        'payment_notes'
     ];
 
     protected $casts = [
@@ -37,6 +39,7 @@ class Delivery extends Model
         'delivered_at' => 'datetime',
         'confirmed_at' => 'datetime',
         'is_confirmed_by_customer' => 'boolean',
+        'payment_received_at' => 'datetime'
     ];
 
     /**
@@ -309,6 +312,23 @@ class Delivery extends Model
         $this->update([
             'delivery_status' => 'failed',
             'delivery_notes' => $notes
+        ]);
+        
+        return $this;
+    }
+
+    /**
+     * Retry a failed delivery.
+     */
+    public function retryFailedDelivery()
+    {
+        if ($this->delivery_status !== 'failed') {
+            throw new \Exception('Only failed deliveries can be retried.');
+        }
+
+        $this->update([
+            'delivery_status' => 'out_for_delivery',
+            'delivery_notes' => null // Clear previous failure notes
         ]);
         
         return $this;

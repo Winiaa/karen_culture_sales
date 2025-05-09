@@ -117,6 +117,57 @@
             .brand-logo:hover .brand-name {
                 color: var(--primary-light);
             }
+
+            /* Modern button styles */
+            .custom-btn {
+                width: 100%;
+                padding: 8px 16px;
+                background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+                border: none;
+                border-radius: 6px;
+                color: white;
+                font-weight: 600;
+                font-size: 0.875rem;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                box-shadow: 0 4px 15px rgba(26, 71, 42, 0.2);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .custom-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(26, 71, 42, 0.3);
+                background: linear-gradient(135deg, var(--primary-light), var(--primary-color));
+            }
+
+            .custom-btn:active {
+                transform: translateY(1px);
+                box-shadow: 0 2px 10px rgba(26, 71, 42, 0.2);
+            }
+
+            .custom-btn::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+                transform: translateX(-100%);
+                transition: transform 0.6s ease;
+            }
+
+            .custom-btn:hover::after {
+                transform: translateX(100%);
+            }
+
+            .custom-btn:focus {
+                outline: none;
+                box-shadow: 0 0 0 3px rgba(156, 170, 100, 0.3);
+            }
         </style>
     </head>
     <body>

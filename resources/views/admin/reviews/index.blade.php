@@ -43,7 +43,26 @@
 
     <!-- Reviews Table -->
     <div class="card">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Reviews List</h6>
+        </div>
         <div class="card-body">
+            @if(session('success'))
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
+
+            @if(session('error'))
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    {{ session('error') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
+
             <div class="table-responsive">
                 <table class="table table-hover">
                     <thead>
@@ -121,8 +140,9 @@
                                         <i class="fas fa-times"></i>
                                     </button>
                                     @endif
-                                    <button type="button" class="btn btn-sm btn-outline-danger delete-review" 
-                                            data-review-id="{{ $review->id }}">
+                                    <button type="button" class="btn btn-sm btn-outline-danger delete-btn" 
+                                            data-delete-url="{{ route('admin.reviews.destroy', $review) }}"
+                                            data-type="review">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -204,82 +224,23 @@
 </div>
 @endforeach
 
+<!-- Include all confirmation modals -->
+<x-approve-confirmation-modal />
+<x-reject-confirmation-modal />
+<x-delete-confirmation-modal />
+
 @endsection
 
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Handle review approval
-    document.querySelectorAll('.approve-review').forEach(button => {
-        button.addEventListener('click', function() {
-            if (confirm('Are you sure you want to approve this review?')) {
-                const reviewId = this.dataset.reviewId;
-                fetch(`/admin/reviews/${reviewId}/approve`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Accept': 'application/json'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        alert('Failed to approve review');
-                    }
-                });
-            }
-        });
-    });
-
-    // Handle review rejection
-    document.querySelectorAll('.reject-review').forEach(button => {
-        button.addEventListener('click', function() {
-            if (confirm('Are you sure you want to reject this review?')) {
-                const reviewId = this.dataset.reviewId;
-                fetch(`/admin/reviews/${reviewId}/reject`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Accept': 'application/json'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        alert('Failed to reject review');
-                    }
-                });
-            }
-        });
-    });
-
-    // Handle review deletion
-    document.querySelectorAll('.delete-review').forEach(button => {
-        button.addEventListener('click', function() {
-            if (confirm('Are you sure you want to delete this review? This action cannot be undone.')) {
-                const reviewId = this.dataset.reviewId;
-                fetch(`/admin/reviews/${reviewId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Accept': 'application/json'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        alert('Failed to delete review');
-                    }
-                });
-            }
-        });
-    });
-});
-</script>
+@push('styles')
+<style>
+    .btn-group .btn {
+        margin-right: 2px;
+    }
+    .btn-group .btn:last-child {
+        margin-right: 0;
+    }
+    .badge {
+        padding: 0.5em 0.75em;
+    }
+</style>
 @endpush 

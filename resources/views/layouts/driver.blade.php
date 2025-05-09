@@ -17,114 +17,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     
     <!-- Custom CSS -->
-    <style>
-        :root {
-            --primary-color: #1a472a; /* Dark green - main brand color */
-            --primary-light: #2d634c; /* Lighter green for hover states */
-            --primary-dark: #0e3019; /* Darker green for active states */
-            --accent-color: #9caa64; /* Sage green accent */
-            --accent-light: #d4ddb9; /* Light sage for hover states */
-            --text-color: #333333;
-            --text-light: #777777;
-            --bg-light: #f3f7f4; /* Light sage background */
-            --bg-medium: #e6ede8; /* Medium sage for sections */
-            --white: #ffffff;
-        }
-        
-        body {
-            font-family: 'Poppins', sans-serif;
-            color: var(--text-color);
-            background-color: var(--bg-light);
-        }
-        
-        .driver-sidebar {
-            background-color: var(--primary-color);
-            min-height: 100vh;
-            color: white;
-        }
-        
-        .driver-sidebar .nav-link {
-            color: #f8f9fa;
-            padding: 0.75rem 1.25rem;
-            border-radius: 0.25rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        .driver-sidebar .nav-link:hover {
-            background-color: var(--primary-light);
-        }
-        
-        .driver-sidebar .nav-link.active {
-            background-color: var(--accent-color);
-            color: var(--primary-dark);
-            font-weight: 500;
-        }
-        
-        .driver-sidebar .sidebar-brand {
-            padding: 1.5rem 1.25rem;
-            font-size: 1.25rem;
-            font-weight: 600;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        
-        .stats-card {
-            border-radius: 10px;
-            border: none;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-        
-        .stats-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        
-        .badge {
-            padding: 0.5em 0.75em;
-            font-weight: 500;
-        }
-        
-        .bg-primary {
-            background-color: var(--primary-color) !important;
-        }
-        
-        .bg-warning {
-            background-color: #f0ad4e !important;
-        }
-        
-        .bg-success {
-            background-color: #4caf50 !important;
-        }
-        
-        .bg-danger {
-            background-color: #f44336 !important;
-        }
-        
-        .text-primary {
-            color: var(--primary-color) !important;
-        }
-        
-        .btn-primary {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-        }
-        
-        .btn-primary:hover {
-            background-color: var(--primary-light);
-            border-color: var(--primary-light);
-        }
-        
-        /* Mobile responsiveness */
-        @media (max-width: 768px) {
-            .driver-sidebar {
-                min-height: auto;
-            }
-            
-            .content-wrapper {
-                margin-left: 0 !important;
-            }
-        }
-    </style>
+    <link href="{{ asset('css/driver.css') }}" rel="stylesheet">
     
     @stack('styles')
 </head>
@@ -132,7 +25,7 @@
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 p-0 driver-sidebar d-md-block collapse" id="driverSidebar">
+            <div class="col-md-3 col-lg-2 p-0 driver-sidebar d-md-block" id="driverSidebar">
                 <div class="d-flex flex-column min-vh-100">
                     <div class="p-3 text-center">
                         <h5 class="text-white">{{ config('app.name', 'Karen Culture Sales') }}</h5>
@@ -155,47 +48,8 @@
                     
                     <hr class="bg-light my-2">
                     
-                    <ul class="nav flex-column mb-auto">
-                        <li class="nav-item">
-                            <a href="{{ route('driver.dashboard') }}" class="nav-link {{ request()->routeIs('driver.dashboard') ? 'active' : '' }}">
-                                <i class="fas fa-tachometer-alt"></i> Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="{{ route('driver.deliveries.index') }}" class="nav-link {{ request()->routeIs('driver.deliveries.index') ? 'active' : '' }}">
-                                <i class="fas fa-list"></i> All Deliveries
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="{{ route('driver.deliveries.assigned') }}" class="nav-link {{ request()->routeIs('driver.deliveries.assigned') ? 'active' : '' }}">
-                                <i class="fas fa-truck-loading"></i> Assigned Deliveries
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="{{ route('driver.deliveries.completed') }}" class="nav-link {{ request()->routeIs('driver.deliveries.completed') ? 'active' : '' }}">
-                                <i class="fas fa-check-circle"></i> Completed Deliveries
-                            </a>
-                        </li>
-                        <li class="nav-item dropdown">
-                            <a href="#" class="nav-link dropdown-toggle {{ request()->routeIs('driver.profile.*') ? 'active' : '' }}" data-bs-toggle="collapse" data-bs-target="#profileSubmenu">
-                                <i class="fas fa-user-circle"></i> My Account
-                            </a>
-                            <div class="collapse {{ request()->routeIs('driver.profile.*') ? 'show' : '' }}" id="profileSubmenu">
-                                <ul class="nav flex-column ms-3">
-                                    <li class="nav-item">
-                                        <a href="{{ route('driver.profile.edit') }}" class="nav-link {{ request()->routeIs('driver.profile.edit') ? 'active' : '' }}">
-                                            <i class="fas fa-id-card"></i> Driver Profile
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a href="{{ route('driver.profile.password') }}" class="nav-link {{ request()->routeIs('driver.profile.password') ? 'active' : '' }}">
-                                            <i class="fas fa-key"></i> Change Password
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </li>
-                    </ul>
+                    @include('layouts.partials.driver-navigation')
+                    
                     <hr class="bg-light">
                     
                     <!-- Spacer to push logout to bottom -->
@@ -214,13 +68,13 @@
             </div>
             
             <!-- Main Content -->
-            <div class="col-md-9 col-lg-10 driver-content">
+            <div class="col-md-9 col-lg-10 content-wrapper">
                 <nav class="navbar navbar-expand-lg navbar-light bg-white mb-4 shadow-sm rounded">
                     <div class="container-fluid">
-                        <button class="navbar-toggler d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#driverSidebar">
+                        <button class="navbar-toggler" type="button" id="sidebarToggle">
                             <span class="navbar-toggler-icon"></span>
                         </button>
-                        <span class="navbar-brand d-none d-sm-inline">
+                        <span class="navbar-brand">
                             @if (auth()->user() && auth()->user()->driver)
                                 <span class="badge {{ auth()->user()->driver->is_active ? 'bg-success' : 'bg-secondary' }} me-2">
                                     {{ auth()->user()->driver->is_active ? 'Active' : 'Inactive' }}
@@ -236,27 +90,7 @@
                     </div>
                 </nav>
                 
-                <!-- Flash Messages -->
-                @if (session('success'))
-                    <div class="alert alert-success alert-dismissible fade show mb-4">
-                        {{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                @endif
-                
-                @if (session('error'))
-                    <div class="alert alert-danger alert-dismissible fade show mb-4">
-                        {{ session('error') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                @endif
-                
-                @if (session('info'))
-                    <div class="alert alert-info alert-dismissible fade show mb-4">
-                        {{ session('info') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                @endif
+                @include('layouts.partials.flash-messages')
                 
                 <!-- Page Content -->
                 <div class="bg-white p-4 shadow-sm rounded">
@@ -270,19 +104,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- Custom Scripts -->
-    <script>
-        // Initialize Bootstrap components
-        document.addEventListener('DOMContentLoaded', function() {
-            // Auto-close alerts after 5 seconds
-            setTimeout(function() {
-                const alerts = document.querySelectorAll('.alert');
-                alerts.forEach(function(alert) {
-                    const bsAlert = new bootstrap.Alert(alert);
-                    bsAlert.close();
-                });
-            }, 5000);
-        });
-    </script>
+    <script src="{{ asset('js/driver.js') }}"></script>
     
     @stack('scripts')
 </body>

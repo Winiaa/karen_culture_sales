@@ -14,9 +14,17 @@ use Intervention\Image\Drivers\Gd\Driver;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use App\Services\NewsletterService;
 
 class ProductController extends Controller
 {
+    protected $newsletterService;
+
+    public function __construct(NewsletterService $newsletterService)
+    {
+        $this->newsletterService = $newsletterService;
+    }
+
     /**
      * Display a listing of the products.
      */
@@ -33,7 +41,10 @@ class ProductController extends Controller
             $request->get('page', 1)
         );
 
-        $products = Cache::remember($cacheKey, 3600, function () use ($categoryId, $search) {
+        $products = Cache::remember($cacheKey, 3600, function () use ($categoryId, $search, $cacheKey) {
+            // Add this key to our tracking list
+            $this->addProductCacheKey($cacheKey);
+
             $query = Product::with('category');
 
             if ($categoryId) {
@@ -83,6 +94,23 @@ class ProductController extends Controller
         ];
 
         return $request->validate($rules);
+    }
+
+    /**
+     * Generate a unique slug for the product
+     */
+    private function generateUniqueSlug($title)
+    {
+        $slug = Str::slug($title);
+        $count = 1;
+        
+        // Keep checking if the slug exists and append a number if it does
+        while (Product::where('slug', $slug)->exists()) {
+            $slug = Str::slug($title) . '-' . $count;
+            $count++;
+        }
+        
+        return $slug;
     }
 
     /**
@@ -167,10 +195,13 @@ class ProductController extends Controller
                 }
             }
 
+            // Generate unique slug
+            $slug = $this->generateUniqueSlug($request->title);
+
             // Create product
             $product = Product::create([
                 'title' => $request->title,
-                'slug' => Str::slug($request->title),
+                'slug' => $slug,
                 'description' => $request->description,
                 'price' => $request->price,
                 'discount_price' => $request->discount_price,
@@ -181,6 +212,14 @@ class ProductController extends Controller
                 'status' => $request->status ?? 'active'
             ]);
 
+            // Clear all product-related cache
+            $this->clearProductCache();
+
+            // Send notifications to subscribers if the product is active
+            if ($product->status === 'active') {
+                $this->newsletterService->notifyNewProduct($product);
+            }
+
             DB::commit();
 
             return redirect()->route('admin.products.index')
@@ -188,7 +227,8 @@ class ProductController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error creating product: ' . $e->getMessage());
-            return back()->with('error', 'Failed to create product. Please try again.');
+            return back()->with('error', 'Failed to create product. Please try again.')
+                ->withInput();
         }
     }
 
@@ -346,6 +386,9 @@ class ProductController extends Controller
                 'status' => $request->status ?? 'active'
             ]);
 
+            // Clear all product-related cache
+            $this->clearProductCache();
+
             DB::commit();
 
             return redirect()->route('admin.products.index')
@@ -363,6 +406,8 @@ class ProductController extends Controller
     public function destroy(Product $product)
     {
         try {
+            DB::beginTransaction();
+
             // Delete main image if it exists
             if ($product->image && Storage::disk('public')->exists($product->image)) {
                 Storage::disk('public')->delete($product->image);
@@ -379,12 +424,17 @@ class ProductController extends Controller
             
             $product->delete();
             
+            // Clear all product-related cache
+            $this->clearProductCache();
+
+            DB::commit();
+            
             return redirect()->route('admin.products.index')
                 ->with('success', 'Product deleted successfully.');
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::error('Error deleting product: ' . $e->getMessage());
-            return redirect()->back()
-                ->with('error', 'Error deleting product: ' . $e->getMessage());
+            return back()->with('error', 'Failed to delete product. Please try again.');
         }
     }
 
@@ -429,5 +479,28 @@ class ProductController extends Controller
         ]);
 
         return back()->with('success', 'Product availability updated successfully.');
+    }
+
+    private function clearProductCache()
+    {
+        // Get all cache keys
+        $keys = Cache::get('product_cache_keys', []);
+        
+        // Clear each key
+        foreach ($keys as $key) {
+            Cache::forget($key);
+        }
+        
+        // Clear the keys list
+        Cache::forget('product_cache_keys');
+    }
+
+    private function addProductCacheKey($key)
+    {
+        $keys = Cache::get('product_cache_keys', []);
+        if (!in_array($key, $keys)) {
+            $keys[] = $key;
+            Cache::forever('product_cache_keys', $keys);
+        }
     }
 }

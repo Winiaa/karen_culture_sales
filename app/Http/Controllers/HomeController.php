@@ -4,18 +4,27 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Services\ProductService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class HomeController extends Controller
 {
+    protected $productService;
+
+    public function __construct(ProductService $productService)
+    {
+        $this->productService = $productService;
+    }
+
     /**
      * Show the application dashboard.
      */
     public function index()
     {
         // Only redirect admins, allow other users to see the home page
-        if (auth()->check() && auth()->user()->usertype === 'admin') {
+        if (Auth::check() && Auth::user()->usertype === 'admin') {
             return redirect()->route('admin.dashboard');
         }
         
@@ -28,15 +37,8 @@ class HomeController extends Controller
                 ->get();
             Log::info('Categories loaded', ['count' => $categories->count()]);
 
-            // Get featured products (for now, we'll just get the latest 4 products)
-            $featuredProducts = Product::with('category')
-                ->whereHas('category', function($query) {
-                    $query->where('is_active', 1);
-                })
-                ->where('status', 'active')
-                ->orderBy('created_at', 'desc')
-                ->take(4)
-                ->get();
+            // Get featured products using the service
+            $featuredProducts = $this->productService->getFeaturedProducts(8)->get();
             Log::info('Featured products loaded', ['count' => $featuredProducts->count()]);
 
             return view('home', compact('categories', 'featuredProducts'));

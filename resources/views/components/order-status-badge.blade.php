@@ -4,6 +4,7 @@
     $badgeColor = match($order->order_status) {
         'delivered' => 'success',
         'cancelled' => 'danger',
+        'processing' => 'warning',
         default => 'primary'
     };
 @endphp

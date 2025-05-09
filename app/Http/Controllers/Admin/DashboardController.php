@@ -27,7 +27,7 @@ class DashboardController extends Controller
         // Recent orders - load user relationship
         $latestOrders = Order::with(['user'])
             ->latest()
-            ->take(5)
+            ->take(10)
             ->get();
             
         // Top products (by order count) - load category relationship

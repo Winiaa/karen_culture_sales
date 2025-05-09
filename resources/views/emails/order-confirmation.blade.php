@@ -18,12 +18,12 @@ Thank you for your order with Karen Culture Sales. We're excited to confirm that
 
 ## Order Items
 @foreach($order->orderItems as $item)
-- {{ $item->product->name }} x {{ $item->quantity }} - @baht($item->price * $item->quantity)
+- {{ $item->product->name }} x {{ $item->quantity }} - @baht($item->subtotal)
 @endforeach
 
 ## Order Summary
 **Subtotal:** @baht($order->subtotal)  
-**Shipping:** @baht($order->shipping_fee)  
+**Shipping:** @if($order->shipping_cost > 0) @baht($order->shipping_cost) @else Free @endif  
 **Total:** @baht($order->total_amount)
 
 ## Shipping Address
